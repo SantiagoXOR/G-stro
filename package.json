@@ -1,0 +1,37 @@
+{
+  "name": "gestro-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aplicación para gestión de bar/restaurante con sistema de pedidos por QR",
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm run start",
+    "lint": "cd frontend && npm run lint",
+    "test": "node scripts/run-tests.js",
+    "test:unit": "cd frontend && npm test",
+    "test:e2e": "cd frontend && npm run cypress",
+    "supabase:setup": "node scripts/setup-supabase.js",
+    "supabase:migrations": "node scripts/apply-migrations.js",
+    "supabase:types": "node scripts/generate-types.js",
+    "supabase:check": "node scripts/check-supabase-security-simple.js",
+    "supabase:prepare": "node scripts/prepare-migrations.js",
+    "supabase:split": "node scripts/apply-migrations-by-parts.js",
+    "supabase:fix": "node scripts/fix-migrations.js"
+  },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@mercadopago/sdk-react": "^1.0.2",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/ssr": "^0.6.1",
+    "@supabase/supabase-js": "^2.49.4",
+    "better-auth": "^1.2.7",
+    "mapbox-gl": "^3.11.0",
+    "mercadopago": "^2.4.0"
+  }
+}

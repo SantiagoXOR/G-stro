@@ -1,0 +1,160 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Color principal: verde oscuro #112D1C */
+    --primary: 146 43% 12%;
+    --primary-foreground: 35 82% 97%; /* peach-cream-50 #fdf7ef */
+
+    /* Color acento: melocotón crema #FAECD8 */
+    --accent: 37 80% 91%;
+    --accent-foreground: 146 43% 12%;
+
+    --background: 37 10% 98%;
+    --foreground: 146 43% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 146 43% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 146 43% 12%;
+
+    --secondary: 146 30% 90%;
+    --secondary-foreground: 146 43% 12%;
+
+    --muted: 37 30% 96%;
+    --muted-foreground: 146 20% 30%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 37 10% 90%;
+    --input: 37 10% 90%;
+    --ring: 146 43% 12%;
+
+    /* Paleta Bush (Verde) */
+    --color-bush-50: 140 50% 96%;
+    --color-bush-100: 141 47% 93%;
+    --color-bush-200: 142 45% 85%;
+    --color-bush-300: 143 43% 73%;
+    --color-bush-400: 144 41% 58%;
+    --color-bush-500: 145 39% 45%;
+    --color-bush-600: 146 37% 37%;
+    --color-bush-700: 147 35% 29%;
+    --color-bush-800: 148 33% 24%;
+    --color-bush-900: 149 31% 20%;
+    --color-bush-950: 150 29% 12%;
+
+    /* Paleta Peach Cream (Melocotón) */
+    --color-peach-cream-50: 35 82% 97%;
+    --color-peach-cream-100: 36 80% 91%;
+    --color-peach-cream-200: 37 78% 83%;
+    --color-peach-cream-300: 38 76% 72%;
+    --color-peach-cream-400: 39 74% 61%;
+    --color-peach-cream-500: 40 72% 53%;
+    --color-peach-cream-600: 41 70% 48%;
+    --color-peach-cream-700: 42 68% 40%;
+    --color-peach-cream-800: 43 66% 34%;
+    --color-peach-cream-900: 44 64% 28%;
+    --color-peach-cream-950: 45 62% 15%;
+
+    --radius: 1rem;
+  }
+
+  .dark {
+    /* Color principal: verde oscuro #112D1C */
+    --primary: 146 43% 12%;
+    --primary-foreground: 35 82% 97%; /* peach-cream-50 #fdf7ef */
+
+    /* Color acento: melocotón crema #FAECD8 */
+    --accent: 37 80% 91%;
+    --accent-foreground: 146 43% 12%;
+
+    --background: 146 43% 8%;
+    --foreground: 37 80% 91%;
+
+    --card: 146 30% 15%;
+    --card-foreground: 37 80% 91%;
+
+    --popover: 146 30% 15%;
+    --popover-foreground: 37 80% 91%;
+
+    --secondary: 146 30% 20%;
+    --secondary-foreground: 37 80% 91%;
+
+    --muted: 146 30% 20%;
+    --muted-foreground: 37 60% 80%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 146 30% 20%;
+    --input: 146 30% 20%;
+    --ring: 37 80% 91%;
+
+    /* Paleta Bush (Verde) */
+    --color-bush-50: 140 50% 96%;
+    --color-bush-100: 141 47% 93%;
+    --color-bush-200: 142 45% 85%;
+    --color-bush-300: 143 43% 73%;
+    --color-bush-400: 144 41% 58%;
+    --color-bush-500: 145 39% 45%;
+    --color-bush-600: 146 37% 37%;
+    --color-bush-700: 147 35% 29%;
+    --color-bush-800: 148 33% 24%;
+    --color-bush-900: 149 31% 20%;
+    --color-bush-950: 150 29% 12%;
+
+    /* Paleta Peach Cream (Melocotón) */
+    --color-peach-cream-50: 35 82% 97%;
+    --color-peach-cream-100: 36 80% 91%;
+    --color-peach-cream-200: 37 78% 83%;
+    --color-peach-cream-300: 38 76% 72%;
+    --color-peach-cream-400: 39 74% 61%;
+    --color-peach-cream-500: 40 72% 53%;
+    --color-peach-cream-600: 41 70% 48%;
+    --color-peach-cream-700: 42 68% 40%;
+    --color-peach-cream-800: 43 66% 34%;
+    --color-peach-cream-900: 44 64% 28%;
+    --color-peach-cream-950: 45 62% 15%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.food-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.food-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.category-pill {
+  transition: all 0.3s ease;
+}
+
+.category-pill:hover,
+.category-pill.active {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.promotion-card {
+  transition: transform 0.3s ease;
+}
+
+.promotion-card:hover {
+  transform: scale(1.02);
+}
+
