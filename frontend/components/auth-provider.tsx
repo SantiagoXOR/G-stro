@@ -256,14 +256,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: null }
       }
 
-      // Modo online: autenticación real con Google
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
-      return { error }
+      // Modo online: usar nuestra ruta personalizada para la autenticación con Google
+      // Esta ruta maneja mejor el flujo de autenticación y los errores
+      console.log('Redirigiendo a la ruta de autenticación con Google...');
+
+      // Guardar una marca de tiempo para depuración
+      localStorage.setItem('auth_google_redirect_time', new Date().toISOString());
+
+      // Generar un nuevo code_verifier y guardarlo en localStorage
+      const generateCodeVerifier = () => {
+        const array = new Uint8Array(32)
+        window.crypto.getRandomValues(array)
+        return Array.from(array, (byte) => ('0' + (byte & 0xFF).toString(16)).slice(-2)).join('')
+      }
+
+      const newCodeVerifier = generateCodeVerifier()
+      localStorage.setItem('supabase.auth.code_verifier', newCodeVerifier)
+      localStorage.setItem('supabase-auth-code-verifier-backup', newCodeVerifier)
+
+      console.log('Nuevo code_verifier generado y guardado en AuthProvider')
+
+      // Usar la ruta dedicada para la autenticación con Google
+      window.location.href = '/auth/google';
+
+      return { error: null };
     } catch (error) {
       console.error("Error al iniciar sesión con Google:", error)
       return { error }

@@ -6,10 +6,14 @@ import Image from "next/image"
 import Link from "next/link"
 import PromotionCarousel from "@/components/promotion-carousel"
 import Logo from "@/components/logo"
+import AuthCodeHandler from "@/components/auth-code-handler"
+import { AuthStatus } from "@/components/auth-status"
 
 export default function Home() {
   return (
     <div className="flex flex-col">
+      {/* Componente para manejar el código de autenticación */}
+      <AuthCodeHandler />
       {/* Hero Section */}
       <div className="relative h-[40vh] w-full">
         <Image
@@ -95,6 +99,12 @@ export default function Home() {
             </Link>
           ))}
         </div>
+      </div>
+
+      {/* Estado de Autenticación */}
+      <div className="px-4 mb-6">
+        <h2 className="text-xl font-bold mb-3">Tu Cuenta</h2>
+        <AuthStatus />
       </div>
 
       {/* Popular Items */}

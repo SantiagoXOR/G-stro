@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation"
 import { getUserOrders, Order } from "@/lib/services/orders"
 import { useAuth } from "@/components/auth-provider"
 import { toast } from "sonner"
+import { isInOfflineMode, offlineData } from "@/lib/offline-mode"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -81,18 +82,48 @@ export default function OrderHistoryPage() {
   useEffect(() => {
     const fetchOrders = async () => {
       if (!user) {
+        console.log('No hay usuario autenticado, redirigiendo a login')
         router.push("/auth/login")
         return
       }
 
       try {
         setIsLoading(true)
-        const ordersData = await getUserOrders(user.id)
-        setOrders(ordersData)
-        setFilteredOrders(ordersData)
+        console.log('Obteniendo pedidos para el usuario:', user.id)
+
+        // Verificar si estamos en modo offline
+        if (isInOfflineMode()) {
+          console.log('Modo offline: usando datos de ejemplo para pedidos')
+          const offlineOrdersData = offlineData.orders as unknown as Order[]
+          setOrders(offlineOrdersData)
+          setFilteredOrders(offlineOrdersData)
+
+          if (offlineOrdersData.length === 0) {
+            toast.info('No hay pedidos disponibles en modo offline')
+          }
+        } else {
+          // Modo online: intentar obtener los pedidos del usuario
+          console.log('Modo online: obteniendo pedidos de la base de datos')
+          const ordersData = await getUserOrders(user.id)
+
+          console.log('Pedidos obtenidos:', ordersData.length)
+          setOrders(ordersData)
+          setFilteredOrders(ordersData)
+
+          // Si no hay pedidos pero no hubo error, mostrar un mensaje informativo
+          if (ordersData.length === 0) {
+            toast.info('No tienes pedidos en tu historial')
+          }
+        }
       } catch (error) {
         console.error("Error al cargar pedidos:", error)
         toast.error("Error al cargar el historial de pedidos")
+
+        // En caso de error, intentar usar datos de ejemplo
+        console.log('Usando datos de ejemplo como fallback')
+        const fallbackData = offlineData.orders as unknown as Order[]
+        setOrders(fallbackData)
+        setFilteredOrders(fallbackData)
       } finally {
         setIsLoading(false)
       }
@@ -114,7 +145,7 @@ export default function OrderHistoryPage() {
 
     // Filtrar por búsqueda (ID del pedido)
     if (searchQuery) {
-      result = result.filter((order) => 
+      result = result.filter((order) =>
         order.id.toLowerCase().includes(searchQuery.toLowerCase())
       )
     }

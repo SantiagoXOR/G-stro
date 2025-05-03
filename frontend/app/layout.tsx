@@ -8,6 +8,7 @@ import { AuthProvider } from "@/components/auth-provider"
 import { SupabaseDebug } from "@/components/supabase-debug"
 import { ConnectionStatus } from "@/components/connection-status"
 import { OfflineModeToggle } from "@/components/offline-mode-toggle"
+import { Toaster } from "sonner"
 
 const outfit = Outfit({ subsets: ["latin"] })
 
@@ -31,6 +32,7 @@ export default function RootLayout({
             <ConnectionStatus />
             <OfflineModeToggle />
             {process.env.NODE_ENV !== 'production' && <SupabaseDebug />}
+            <Toaster position="top-right" richColors closeButton />
           </AuthProvider>
         </ThemeProvider>
       </body>

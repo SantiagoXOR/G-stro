@@ -10,6 +10,8 @@ import { useAuth } from "@/components/auth-provider"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "../../shared/types/database.types"
 import { OrderStatusBadge } from "@/components/ui/order-status-badge"
+import { toast } from "sonner"
+import { getOrCreateUserProfile } from "@/lib/services/profiles"
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 type Order = Database["public"]["Tables"]["orders"]["Row"]
@@ -34,14 +36,20 @@ export default function ProfilePage() {
       try {
         setIsLoading(true)
 
-        // Obtener perfil
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single()
+        console.log('Cargando datos del perfil para el usuario:', user.id)
 
-        if (profileError) throw profileError
+        // Obtener o crear perfil usando el servicio
+        const profileData = await getOrCreateUserProfile(
+          user.id,
+          user.email || '',
+          user.user_metadata?.name || user.user_metadata?.full_name || '',
+          'customer'
+        )
+
+        if (!profileData) {
+          throw new Error('No se pudo obtener o crear el perfil del usuario')
+        }
+
         setProfile(profileData)
 
         // Obtener pedidos
@@ -51,10 +59,16 @@ export default function ProfilePage() {
           .eq("customer_id", user.id)
           .order("created_at", { ascending: false })
 
-        if (ordersError) throw ordersError
+        if (ordersError) {
+          console.error('Error al obtener pedidos:', ordersError)
+          throw new Error(`Error al obtener pedidos: ${ordersError.message}`)
+        }
+
         setOrders(ordersData || [])
       } catch (error) {
         console.error("Error al cargar datos del perfil:", error)
+        // Mostrar un toast con el error
+        toast.error(error instanceof Error ? error.message : 'Error al cargar datos del perfil')
       } finally {
         setIsLoading(false)
       }
@@ -88,14 +102,14 @@ export default function ProfilePage() {
         <div className="flex items-center gap-4 mb-4">
           <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-white">
             <Image
-              src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=1780&auto=format&fit=crop"
+              src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=1780&auto=format&fit=crop"}
               alt="Profile"
               fill
               className="object-cover"
             />
           </div>
           <div>
-            <h1 className="text-xl font-bold">¡Hola!</h1>
+            <h1 className="text-xl font-bold">¡Hola, {user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario'}!</h1>
             <p className="text-primary-foreground/80">{user?.email}</p>
           </div>
         </div>

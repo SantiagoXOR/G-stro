@@ -7,18 +7,23 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"]
  * Obtiene el perfil del usuario actual
  */
 export async function getUserProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", userId)
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single()
 
-  if (error) {
-    console.error("Error al obtener perfil de usuario:", error)
+    if (error) {
+      console.error("Error al obtener perfil de usuario:", error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error inesperado al obtener perfil:", error)
     return null
   }
-
-  return data
 }
 
 /**
@@ -80,4 +85,66 @@ export async function updateUserRole(
   }
 
   return data
+}
+
+/**
+ * Crea un perfil para un usuario
+ */
+export async function createUserProfile(
+  userId: string,
+  email: string,
+  name?: string,
+  role: Database["public"]["Enums"]["user_role"] = "customer"
+): Promise<Profile | null> {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .insert([
+        {
+          id: userId,
+          email,
+          name: name || null,
+          role
+        }
+      ])
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Error al crear perfil de usuario:", error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error("Error inesperado al crear perfil:", error)
+    return null
+  }
+}
+
+/**
+ * Obtiene o crea un perfil para un usuario
+ * Si el perfil no existe, lo crea con la información proporcionada
+ */
+export async function getOrCreateUserProfile(
+  userId: string,
+  email: string,
+  name?: string,
+  role: Database["public"]["Enums"]["user_role"] = "customer"
+): Promise<Profile | null> {
+  try {
+    // Intentar obtener el perfil
+    const profile = await getUserProfile(userId)
+
+    // Si el perfil existe, devolverlo
+    if (profile) {
+      return profile
+    }
+
+    // Si no existe, crearlo
+    return await createUserProfile(userId, email, name, role)
+  } catch (error) {
+    console.error("Error en getOrCreateUserProfile:", error)
+    return null
+  }
 }

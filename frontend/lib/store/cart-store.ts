@@ -27,13 +27,16 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
-      
+
       addItem: (product, quantity, options, notes) => {
         const { items } = get()
-        
+
         // Generar un ID único para el item del carrito
-        const id = `${product.id}_${Date.now()}`
-        
+        // Usamos una combinación del ID del producto y un contador basado en los items existentes
+        // para evitar usar Date.now() que causa problemas de hidratación
+        const existingItems = items.filter(item => item.productId === product.id).length
+        const id = `${product.id}_${existingItems + 1}`
+
         // Crear el nuevo item
         const newItem: CartItem = {
           id,
@@ -45,39 +48,39 @@ export const useCartStore = create<CartStore>()(
           notes,
           image: product.image_url,
         }
-        
+
         set({ items: [...items, newItem] })
       },
-      
+
       updateItemQuantity: (id, quantity) => {
         const { items } = get()
-        
+
         if (quantity < 1) {
           return get().removeItem(id)
         }
-        
-        const updatedItems = items.map((item) => 
+
+        const updatedItems = items.map((item) =>
           item.id === id ? { ...item, quantity } : item
         )
-        
+
         set({ items: updatedItems })
       },
-      
+
       removeItem: (id) => {
         const { items } = get()
         const filteredItems = items.filter((item) => item.id !== id)
         set({ items: filteredItems })
       },
-      
+
       clearCart: () => {
         set({ items: [] })
       },
-      
+
       getTotal: () => {
         const { items } = get()
         return items.reduce((total, item) => total + item.price * item.quantity, 0)
       },
-      
+
       getItemsCount: () => {
         const { items } = get()
         return items.reduce((count, item) => count + item.quantity, 0)

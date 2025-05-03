@@ -16,6 +16,7 @@
     "supabase:types": "node scripts/generate-types.js",
     "supabase:check": "node scripts/check-supabase-security-simple.js",
     "supabase:prepare": "node scripts/prepare-migrations.js",
+    "check:auth-profile": "node scripts/check-auth-profile.js",
     "supabase:split": "node scripts/apply-migrations-by-parts.js",
     "supabase:fix": "node scripts/fix-migrations.js"
   },

@@ -1,33 +1,52 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { AuthForm } from '@/components/auth-form'
 import userEvent from '@testing-library/user-event'
+import { useAuth } from '@/components/auth-provider'
 
 // Mock useAuth hook
-jest.mock('@/components/auth-provider', () => ({
-  useAuth: () => ({
-    signIn: jest.fn().mockResolvedValue({ error: null }),
-    signUp: jest.fn().mockResolvedValue({ error: null }),
-    user: null,
-    isLoading: false
-  })
-}))
+jest.mock('@/components/auth-provider', () => {
+  const mockSignIn = jest.fn()
+  const mockSignUp = jest.fn()
+  const mockSignInWithGoogle = jest.fn()
+
+  return {
+    useAuth: jest.fn(() => ({
+      signIn: mockSignIn,
+      signUp: mockSignUp,
+      signInWithGoogle: mockSignInWithGoogle,
+      user: null,
+      isLoading: false
+    }))
+  }
+})
 
 // Mock toast
-jest.mock('sonner', () => ({
-  toast: {
-    success: jest.fn(),
-    error: jest.fn()
+jest.mock('sonner', () => {
+  const mockSuccess = jest.fn()
+  const mockError = jest.fn()
+
+  return {
+    toast: {
+      success: mockSuccess,
+      error: mockError
+    }
   }
-}))
+})
 
 // Mock router
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    back: jest.fn()
-  })
-}))
+jest.mock('next/navigation', () => {
+  const mockPush = jest.fn()
+  const mockReplace = jest.fn()
+  const mockBack = jest.fn()
+
+  return {
+    useRouter: jest.fn(() => ({
+      push: mockPush,
+      replace: mockReplace,
+      back: mockBack
+    }))
+  }
+})
 
 describe('AuthForm Component', () => {
   beforeEach(() => {
@@ -58,7 +77,7 @@ describe('AuthForm Component', () => {
     expect(screen.getByRole('button', { name: /registrarse/i })).toBeInTheDocument()
   })
 
-  it('validates email format', async () => {
+  it('valida el formulario antes de enviar', async () => {
     const user = userEvent.setup()
     render(<AuthForm />)
 
@@ -70,11 +89,14 @@ describe('AuthForm Component', () => {
     const submitButton = screen.getByRole('button', { name: /iniciar sesión/i })
     await user.click(submitButton)
 
-    // Verificar que el formulario se envía correctamente
-    expect(submitButton).toBeInTheDocument()
+    // Verificar que no se llamó a la función de inicio de sesión
+    const { useAuth } = require('@/components/auth-provider')
+    const mockUseAuth = useAuth as jest.Mock
+    const mockSignIn = mockUseAuth().signIn
+    expect(mockSignIn).not.toHaveBeenCalled()
   })
 
-  it('validates password length', async () => {
+  it('valida la longitud de la contraseña', async () => {
     const user = userEvent.setup()
     render(<AuthForm />)
 
@@ -90,31 +112,38 @@ describe('AuthForm Component', () => {
     const submitButton = screen.getByRole('button', { name: /iniciar sesión/i })
     await user.click(submitButton)
 
-    // Verificar que el formulario se envía correctamente
-    expect(submitButton).toBeInTheDocument()
+    // Verificar que no se llamó a la función de inicio de sesión
+    const { useAuth } = require('@/components/auth-provider')
+    const mockUseAuth = useAuth as jest.Mock
+    const mockSignIn = mockUseAuth().signIn
+    expect(mockSignIn).not.toHaveBeenCalled()
   })
 
-  it('submits login form with valid data', async () => {
+  it('envía el formulario de login con datos válidos', async () => {
     // Configurar mocks
     const mockSignIn = jest.fn().mockResolvedValue({ error: null })
-    const mockToastSuccess = jest.fn()
+    const mockPush = jest.fn()
 
-    // Sobrescribir los mocks
-    jest.mock('@/components/auth-provider', () => ({
-      useAuth: () => ({
-        signIn: mockSignIn,
-        signUp: jest.fn(),
-        user: null,
-        isLoading: false
-      })
-    }), { virtual: true })
+    // Configurar los mocks
+    const { useAuth } = require('@/components/auth-provider')
+    const mockUseAuth = useAuth as jest.Mock
+    mockUseAuth.mockReturnValue({
+      signIn: mockSignIn,
+      signUp: jest.fn(),
+      signInWithGoogle: jest.fn(),
+      user: null,
+      isLoading: false
+    })
 
-    jest.mock('sonner', () => ({
-      toast: {
-        success: mockToastSuccess,
-        error: jest.fn()
-      }
-    }), { virtual: true })
+    const { useRouter } = require('next/navigation')
+    const mockUseRouter = useRouter as jest.Mock
+    mockUseRouter.mockReturnValue({
+      push: mockPush,
+      replace: jest.fn(),
+      back: jest.fn()
+    })
+
+    const { toast } = require('sonner')
 
     const user = userEvent.setup()
     render(<AuthForm />)
@@ -131,13 +160,35 @@ describe('AuthForm Component', () => {
     await user.click(submitButton)
 
     // Verificar que se llama a signIn con los datos correctos
-    // Nota: En un entorno real, deberíamos verificar que se llama a signIn
-    // Pero en este caso, debido a cómo están configurados los mocks, no podemos hacerlo directamente
-    // Por lo que simplemente verificamos que el formulario se envía correctamente
-    expect(submitButton).toBeInTheDocument()
+    expect(mockSignIn).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'password123'
+    })
+
+    // Verificar que se muestra un mensaje de éxito
+    expect(toast.success).toHaveBeenCalledWith('Inicio de sesión exitoso')
+
+    // Verificar que se redirige a la página principal
+    expect(mockPush).toHaveBeenCalledWith('/')
   })
 
-  it('submits register form with valid data', async () => {
+  it('envía el formulario de registro con datos válidos', async () => {
+    // Configurar mocks
+    const mockSignUp = jest.fn().mockResolvedValue({ error: null })
+
+    // Configurar los mocks
+    const { useAuth } = require('@/components/auth-provider')
+    const mockUseAuth = useAuth as jest.Mock
+    mockUseAuth.mockReturnValue({
+      signIn: jest.fn(),
+      signUp: mockSignUp,
+      signInWithGoogle: jest.fn(),
+      user: null,
+      isLoading: false
+    })
+
+    const { toast } = require('sonner')
+
     const user = userEvent.setup()
     render(<AuthForm />)
 
@@ -162,23 +213,39 @@ describe('AuthForm Component', () => {
     const registerButton = screen.getByRole('button', { name: /registrarse/i })
     await user.click(registerButton)
 
-    // Verificar que el formulario se envía correctamente
-    expect(registerButton).toBeInTheDocument()
+    // Verificar que se llama a signUp con los datos correctos
+    expect(mockSignUp).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'password123',
+      options: {
+        data: {
+          name: 'Test User',
+          role: 'customer'
+        }
+      }
+    })
+
+    // Verificar que se muestra un mensaje de éxito
+    expect(toast.success).toHaveBeenCalledWith('Cuenta creada correctamente. Verifica tu correo electrónico.')
   })
 
-  it('handles authentication errors', async () => {
+  it('maneja errores de autenticación', async () => {
     // Configurar mock para simular un error
-    const mockSignIn = jest.fn().mockResolvedValue({ error: { message: 'Invalid credentials' } })
+    const mockError = { message: 'Credenciales inválidas' }
+    const mockSignIn = jest.fn().mockResolvedValue({ error: mockError })
 
-    // Sobrescribir los mocks
-    jest.mock('@/components/auth-provider', () => ({
-      useAuth: () => ({
-        signIn: mockSignIn,
-        signUp: jest.fn(),
-        user: null,
-        isLoading: false
-      })
-    }), { virtual: true })
+    // Configurar los mocks
+    const { useAuth } = require('@/components/auth-provider')
+    const mockUseAuth = useAuth as jest.Mock
+    mockUseAuth.mockReturnValue({
+      signIn: mockSignIn,
+      signUp: jest.fn(),
+      signInWithGoogle: jest.fn(),
+      user: null,
+      isLoading: false
+    })
+
+    const { toast } = require('sonner')
 
     const user = userEvent.setup()
     render(<AuthForm />)
@@ -194,7 +261,47 @@ describe('AuthForm Component', () => {
     const submitButton = screen.getByRole('button', { name: /iniciar sesión/i })
     await user.click(submitButton)
 
-    // Verificar que el formulario se envía correctamente
-    expect(submitButton).toBeInTheDocument()
+    // Verificar que se llama a signIn con los datos correctos
+    expect(mockSignIn).toHaveBeenCalledWith({
+      email: 'test@example.com',
+      password: 'password123'
+    })
+
+    // Verificar que se muestra un mensaje de error
+    expect(toast.error).toHaveBeenCalledWith('Credenciales inválidas')
+  })
+
+  it('muestra el botón de inicio de sesión con Google', () => {
+    render(<AuthForm />)
+
+    // Verificar que se muestra el botón de Google
+    const googleButton = screen.getByRole('button', { name: /google/i })
+    expect(googleButton).toBeInTheDocument()
+  })
+
+  it('llama a signInWithGoogle cuando se hace clic en el botón de Google', async () => {
+    // Configurar mock
+    const mockSignInWithGoogle = jest.fn().mockResolvedValue({ error: null })
+
+    // Configurar los mocks
+    const { useAuth } = require('@/components/auth-provider')
+    const mockUseAuth = useAuth as jest.Mock
+    mockUseAuth.mockReturnValue({
+      signIn: jest.fn(),
+      signUp: jest.fn(),
+      signInWithGoogle: mockSignInWithGoogle,
+      user: null,
+      isLoading: false
+    })
+
+    const user = userEvent.setup()
+    render(<AuthForm />)
+
+    // Hacer clic en el botón de Google
+    const googleButton = screen.getByRole('button', { name: /google/i })
+    await user.click(googleButton)
+
+    // Verificar que se llama a signInWithGoogle
+    expect(mockSignInWithGoogle).toHaveBeenCalled()
   })
 })

@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase"
 import type { Database } from "../../../shared/types/database.types"
+import { isInOfflineMode, offlineData } from "@/lib/offline-mode"
 
 export type Order = Database["public"]["Tables"]["orders"]["Row"]
 export type OrderItem = Database["public"]["Tables"]["order_items"]["Row"]
@@ -9,18 +10,33 @@ export type OrderWithCustomer = Order & { customer_name?: string }
  * Obtiene todos los pedidos del usuario actual
  */
 export async function getUserOrders(userId: string): Promise<Order[]> {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("*")
-    .eq("customer_id", userId)
-    .order("created_at", { ascending: false })
-
-  if (error) {
-    console.error("Error al obtener pedidos del usuario:", error)
-    throw error
+  // Verificar si estamos en modo offline
+  if (isInOfflineMode()) {
+    console.log('Modo offline: devolviendo datos de ejemplo para pedidos')
+    return offlineData.orders as unknown as Order[]
   }
 
-  return data || []
+  try {
+    console.log('Obteniendo pedidos para el usuario:', userId)
+
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("customer_id", userId)
+      .order("created_at", { ascending: false })
+
+    if (error) {
+      console.error("Error al obtener pedidos del usuario:", error)
+      throw error
+    }
+
+    console.log('Pedidos obtenidos:', data?.length || 0)
+    return data || []
+  } catch (error) {
+    console.error("Error inesperado al obtener pedidos:", error)
+    // En caso de error, podemos devolver datos de ejemplo para no romper la UI
+    return []
+  }
 }
 
 /**

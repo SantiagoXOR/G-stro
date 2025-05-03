@@ -1,15 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { useAuth } from "@/components/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { signInWithEmail } from "@/lib/auth"
+import { supabase, startOAuthFlow } from "@/lib/supabase"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -17,7 +18,30 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
-  const { signIn, signInWithGoogle } = useAuth()
+
+  // Obtener el error de la URL si existe
+  const searchParams = useSearchParams()
+  const urlError = searchParams.get('error')
+
+  // Si hay un error en la URL, mostrarlo
+  useEffect(() => {
+    if (urlError) {
+      const decodedError = decodeURIComponent(urlError)
+      console.error('Error de autenticación:', decodedError)
+
+      // Formatear mensajes de error comunes para hacerlos más amigables
+      if (decodedError.includes('invalid request: both auth code and code verifier should be non-empty')) {
+        setError('Error en el proceso de autenticación con Google. Por favor, intente nuevamente.')
+      } else if (decodedError.includes('No se proporcion')) {
+        setError('No se pudo completar la autenticación. Por favor, intente nuevamente.')
+      } else {
+        setError(decodedError)
+      }
+
+      // Desactivar el estado de carga si estaba activo
+      setIsLoading(false)
+    }
+  }, [urlError])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,19 +49,22 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const { error } = await signIn(email, password)
+      console.log('Iniciando sesión con email:', email)
+      const { error } = await signInWithEmail(email, password)
 
       if (error) {
+        console.error('Error al iniciar sesión:', error)
         setError(error.message || "Error al iniciar sesión")
         return
       }
 
+      console.log('Inicio de sesión exitoso, redirigiendo...')
       // Redirigir al usuario a la página principal
       router.push("/")
       router.refresh()
     } catch (err) {
+      console.error('Error inesperado al iniciar sesión:', err)
       setError("Ocurrió un error inesperado")
-      console.error(err)
     } finally {
       setIsLoading(false)
     }
@@ -109,14 +136,79 @@ export default function LoginPage() {
                 setError(null)
                 setIsLoading(true)
                 try {
-                  const { error } = await signInWithGoogle()
-                  if (error) {
-                    setError(error.message || "Error al iniciar sesión con Google")
+                  // Usar directamente la API de Supabase para la autenticación con Google
+                  // Siempre usar la URL de callback local para desarrollo
+                  const redirectTo = `${window.location.origin}/auth/callback`;
+
+                  console.log('URL de redirección:', redirectTo);
+
+                  // Limpiar cualquier sesión anterior para evitar problemas
+                  await supabase.auth.signOut();
+
+                  // Verificar el estado actual del localStorage antes de iniciar la autenticación
+                  console.log('Estado de localStorage antes de iniciar autenticación:')
+                  for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i)
+                    console.log(`- ${key}: ${key && localStorage.getItem(key) ? 'tiene valor' : 'vacío'}`)
                   }
+
+                  // Guardar una marca de tiempo para depuración
+                  localStorage.setItem('auth_google_start_time', new Date().toISOString())
+
+                  // Limpiar localStorage y sessionStorage de valores relacionados con el flujo
+                  const projectRef = window.location.hostname.includes('localhost')
+                    ? 'localhost'
+                    : window.location.hostname.split('.')[0]
+
+                  // Limpiar todas las posibles claves relacionadas con el flujo
+                  const keysToRemove = [
+                    'supabase.auth.flow-state',
+                    `sb-${projectRef}-auth-flow-state`,
+                    'supabase.auth.code_verifier',
+                    'supabase-auth-code-verifier-backup',
+                    'sb-code-verifier',
+                    `sb-${projectRef}-auth-code-verifier`
+                  ]
+
+                  keysToRemove.forEach(key => {
+                    localStorage.removeItem(key)
+                    sessionStorage.removeItem(key)
+                  })
+
+                  // Usar nuestra función mejorada para iniciar el flujo de autenticación
+                  console.log('Iniciando flujo de autenticación con Google...')
+                  const { success, data, error } = await startOAuthFlow('google', {
+                    // Asegurarse de que la URL de redirección sea correcta
+                    redirectTo: redirectTo,
+                    // Solicitar scopes adicionales si es necesario
+                    scopes: 'email profile openid',
+                  })
+
+                  // Verificar si se generó un code_verifier
+                  const codeVerifier = localStorage.getItem('supabase.auth.code_verifier')
+                  console.log('Code verifier generado:', codeVerifier ? 'Sí' : 'No')
+
+                  if (!success || error) {
+                    throw error || new Error('Error al iniciar el flujo de autenticación')
+                  }
+
+                  // Guardar información adicional para depuración
+                  if (data?.url) {
+                    console.log('URL de OAuth generada:', data.url.substring(0, 50) + '...')
+
+                    // Extraer y guardar el state de la URL
+                    const url = new URL(data.url)
+                    const state = url.searchParams.get('state')
+                    if (state) {
+                      console.log('Estado del flujo en URL:', state.substring(0, 10) + '...')
+                    }
+                  }
+
+                  // La redirección ocurre automáticamente
+                  console.log('Autenticación con Google iniciada correctamente')
                 } catch (err) {
-                  setError("Error al iniciar sesión con Google")
-                  console.error(err)
-                } finally {
+                  console.error('Error al iniciar sesión con Google:', err)
+                  setError('Error al iniciar sesión con Google')
                   setIsLoading(false)
                 }
               }}

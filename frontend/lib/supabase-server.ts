@@ -14,14 +14,15 @@ if (!configCheck.valid) {
 export const createServerClient = (cookieStore?: ReturnType<typeof cookies>) => {
   return createServerClientSSR<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
-      get(name: string) {
-        return cookieStore?.get(name)?.value
+      async get(name: string) {
+        const cookie = await cookieStore?.get(name)
+        return cookie?.value
       },
-      set(name: string, value: string, options: any) {
-        cookieStore?.set(name, value, options)
+      async set(name: string, value: string, options: any) {
+        await cookieStore?.set(name, value, options)
       },
-      remove(name: string, options: any) {
-        cookieStore?.set(name, '', { ...options, maxAge: 0 })
+      async remove(name: string, options: any) {
+        await cookieStore?.set(name, '', { ...options, maxAge: 0 })
       },
     },
   })
@@ -32,14 +33,15 @@ export const createRouteHandlerClient = () => {
   const cookieStore = cookies()
   return createServerClientSSR<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     cookies: {
-      get(name: string) {
-        return cookieStore.get(name)?.value
+      async get(name: string) {
+        const cookie = await cookieStore.get(name)
+        return cookie?.value
       },
-      set(name: string, value: string, options: any) {
-        cookieStore.set(name, value, options)
+      async set(name: string, value: string, options: any) {
+        await cookieStore.set(name, value, options)
       },
-      remove(name: string, options: any) {
-        cookieStore.set(name, '', { ...options, maxAge: 0 })
+      async remove(name: string, options: any) {
+        await cookieStore.set(name, '', { ...options, maxAge: 0 })
       },
     },
   })

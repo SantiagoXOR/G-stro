@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
 
     // Crear cliente de Supabase
     const cookieStore = cookies()
-    const supabase = createServerClient(cookieStore.toString())
+    const supabase = createServerClient(cookieStore)
 
     // Verificar que la transacción existe
     const { data: transaction, error: transactionError } = await supabase

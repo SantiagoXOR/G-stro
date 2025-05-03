@@ -28,8 +28,18 @@ export async function checkSupabaseConnectivity(): Promise<{
     const responseTime = endTime - startTime;
 
     // Si hay un error, puede ser porque la tabla no existe, pero al menos sabemos que hay conectividad
-    if (error && error.code !== 'PGRST116') { // PGRST116 es el código para "tabla no existe"
+    if (error) {
       console.error('Error al verificar conectividad con Supabase:', error);
+
+      // Si el error es porque la tabla no existe, consideramos que hay conectividad
+      if (error.code === 'PGRST116') { // PGRST116 es el código para "tabla no existe"
+        return {
+          success: true,
+          message: `Conexión exitosa con Supabase (${responseTime}ms) - Tabla health_check no existe`,
+          details: { responseTime, error },
+        };
+      }
+
       return {
         success: false,
         message: `Error al conectar con Supabase: ${error.message}`,
