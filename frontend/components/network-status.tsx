@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
+import { getSupabaseClient } from "@/lib/supabase-client"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 
@@ -13,6 +13,13 @@ export function NetworkStatus() {
     const checkConnection = async () => {
       try {
         // Intentar una operación simple para verificar la conexión
+        const supabase = await getSupabaseClient()
+        if (!supabase) {
+          setStatus('error')
+          setErrorMessage('Cliente de Supabase no disponible')
+          return
+        }
+
         const { error } = await supabase.auth.getSession()
         
         if (error) {

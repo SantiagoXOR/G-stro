@@ -9,7 +9,7 @@ import { Star, ThumbsUp, MessageSquare, Flag } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import { getProductReviews, addReviewReaction, Review } from "@/lib/services/reviews"
-import { useAuth } from "@/components/auth-provider"
+import { useUser } from "@clerk/nextjs"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -29,7 +29,7 @@ interface ProductReviewsProps {
 }
 
 export function ProductReviews({ productId, className = "" }: ProductReviewsProps) {
-  const { user } = useAuth()
+  const { user } = useUser()
   const [reviews, setReviews] = useState<Review[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<number | null>(null)

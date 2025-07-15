@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase"
+import { getSupabaseClient } from "@/lib/supabase"
 import type { Database } from "../../../shared/types/database.types"
 import { MERCADOPAGO_PUBLIC_KEY, isMercadoPagoConfigValid } from "@/lib/supabase-config"
 
@@ -39,6 +39,7 @@ export async function initMercadoPago() {
  * Obtiene los métodos de pago guardados del usuario
  */
 export async function getUserPaymentMethods(userId: string): Promise<PaymentMethod[]> {
+  const supabase = await getSupabaseClient()
   const { data, error } = await supabase
     .from('payment_methods')
     .select('*')
@@ -61,6 +62,8 @@ export async function savePaymentMethod(
   userId: string,
   paymentMethod: Omit<PaymentMethod, 'id' | 'user_id' | 'created_at' | 'updated_at'>
 ): Promise<PaymentMethod | null> {
+  const supabase = await getSupabaseClient()
+
   // Si es el primer método de pago, establecerlo como predeterminado
   const { count } = await supabase
     .from('payment_methods')
@@ -101,6 +104,8 @@ export async function savePaymentMethod(
  * Establece un método de pago como predeterminado
  */
 export async function setDefaultPaymentMethod(userId: string, paymentMethodId: string): Promise<boolean> {
+  const supabase = await getSupabaseClient()
+
   // Primero, establecer todos los métodos como no predeterminados
   const { error: error1 } = await supabase
     .from('payment_methods')
@@ -131,6 +136,8 @@ export async function setDefaultPaymentMethod(userId: string, paymentMethodId: s
  * Elimina un método de pago
  */
 export async function deletePaymentMethod(userId: string, paymentMethodId: string): Promise<boolean> {
+  const supabase = await getSupabaseClient()
+
   // Verificar si es el método predeterminado
   const { data: method, error: fetchError } = await supabase
     .from('payment_methods')
@@ -181,6 +188,8 @@ export async function createPaymentTransaction(
   amount: number,
   paymentMethodId?: string
 ): Promise<PaymentTransaction | null> {
+  const supabase = await getSupabaseClient()
+
   // Crear la transacción de pago
   const { data, error } = await supabase
     .from('payment_transactions')
@@ -254,6 +263,7 @@ export async function processPayment(
  * Obtiene el estado de una transacción
  */
 export async function getTransactionStatus(transactionId: string): Promise<PaymentTransaction | null> {
+  const supabase = await getSupabaseClient()
   const { data, error } = await supabase
     .from('payment_transactions')
     .select('*')
@@ -281,6 +291,8 @@ export async function updateTransactionStatus(
     response?: any;
   }
 ): Promise<PaymentTransaction | null> {
+  const supabase = await getSupabaseClient()
+
   // Actualizar la transacción
   const { data, error } = await supabase
     .from('payment_transactions')

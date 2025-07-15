@@ -1,0 +1,132 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesa 3 - Gëstro</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #112D1C 0%, #1a4d2e 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .qr-container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .logo {
+            color: #112D1C;
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+        
+        .table-number {
+            background: #112D1C;
+            color: #FAECD8;
+            padding: 15px 25px;
+            border-radius: 50px;
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-bottom: 25px;
+            display: inline-block;
+        }
+        
+        .qr-code {
+            margin: 20px 0;
+        }
+        
+        .instructions {
+            color: #333;
+            font-size: 0.95em;
+            line-height: 1.5;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #112D1C;
+        }
+        
+        .url {
+            font-family: monospace;
+            background: #f0f0f0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin: 10px 0;
+            word-break: break-all;
+            color: #333;
+        }
+        
+        .footer {
+            margin-top: 30px;
+            color: #FAECD8;
+            font-size: 0.9em;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                color: black;
+            }
+            .footer {
+                color: #666;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="qr-container">
+        <div class="logo">Gëstro</div>
+        <div class="subtitle">Sistema de Pedidos QR</div>
+        
+        <div class="table-number">Mesa 3</div>
+        
+        <div class="qr-code">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fgestro.vercel.app%2Fscan%3Ftable%3D3" 
+                 alt="Código QR Mesa 3" 
+                 style="border: 2px solid #112D1C; border-radius: 10px;">
+        </div>
+        
+        <div class="instructions">
+            <strong>📱 ¿Cómo hacer tu pedido?</strong><br>
+            1. Escanea este código QR con tu celular<br>
+            2. Explora nuestro menú digital<br>
+            3. Agrega productos a tu carrito<br>
+            4. Realiza el pago de forma segura<br>
+            5. ¡Disfruta tu comida!
+        </div>
+        
+        <div class="url">
+            https://gestro.vercel.app/scan?table=3
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>🍽️ Gëstro - Experiencia gastronómica digital</p>
+        <p>¿Necesitas ayuda? Llama a nuestro personal</p>
+    </div>
+</body>
+</html>

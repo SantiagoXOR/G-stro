@@ -3,6 +3,24 @@ import { AuthForm } from '@/components/auth-form'
 import userEvent from '@testing-library/user-event'
 import { useAuth } from '@/components/auth-provider'
 
+// Mock offline mode
+jest.mock('@/lib/offline-mode', () => ({
+  isInOfflineMode: jest.fn(() => true) // Forzar modo offline para tests
+}))
+
+// Mock Clerk hooks
+jest.mock('@clerk/nextjs', () => ({
+  useUser: jest.fn(() => ({ user: null })),
+  useSignIn: jest.fn(() => ({
+    signIn: null,
+    isLoaded: false
+  })),
+  useSignUp: jest.fn(() => ({
+    signUp: null,
+    isLoaded: false
+  }))
+}))
+
 // Mock useAuth hook
 jest.mock('@/components/auth-provider', () => {
   const mockSignIn = jest.fn()
@@ -160,13 +178,10 @@ describe('AuthForm Component', () => {
     await user.click(submitButton)
 
     // Verificar que se llama a signIn con los datos correctos
-    expect(mockSignIn).toHaveBeenCalledWith({
-      email: 'test@example.com',
-      password: 'password123'
-    })
+    expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123')
 
-    // Verificar que se muestra un mensaje de éxito
-    expect(toast.success).toHaveBeenCalledWith('Inicio de sesión exitoso')
+    // Verificar que se muestra un mensaje de éxito (modo offline)
+    expect(toast.success).toHaveBeenCalledWith('Inicio de sesión exitoso (modo offline)')
 
     // Verificar que se redirige a la página principal
     expect(mockPush).toHaveBeenCalledWith('/')
@@ -214,19 +229,10 @@ describe('AuthForm Component', () => {
     await user.click(registerButton)
 
     // Verificar que se llama a signUp con los datos correctos
-    expect(mockSignUp).toHaveBeenCalledWith({
-      email: 'test@example.com',
-      password: 'password123',
-      options: {
-        data: {
-          name: 'Test User',
-          role: 'customer'
-        }
-      }
-    })
+    expect(mockSignUp).toHaveBeenCalledWith('test@example.com', 'password123', 'Test User')
 
-    // Verificar que se muestra un mensaje de éxito
-    expect(toast.success).toHaveBeenCalledWith('Cuenta creada correctamente. Verifica tu correo electrónico.')
+    // Verificar que se muestra un mensaje de éxito (modo offline)
+    expect(toast.success).toHaveBeenCalledWith('Cuenta creada correctamente (modo offline)')
   })
 
   it('maneja errores de autenticación', async () => {
@@ -262,10 +268,7 @@ describe('AuthForm Component', () => {
     await user.click(submitButton)
 
     // Verificar que se llama a signIn con los datos correctos
-    expect(mockSignIn).toHaveBeenCalledWith({
-      email: 'test@example.com',
-      password: 'password123'
-    })
+    expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123')
 
     // Verificar que se muestra un mensaje de error
     expect(toast.error).toHaveBeenCalledWith('Credenciales inválidas')

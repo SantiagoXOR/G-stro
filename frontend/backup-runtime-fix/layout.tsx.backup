@@ -1,0 +1,24 @@
+import type React from "react"
+import type { Metadata } from "next"
+import "./globals.css"
+
+export const metadata: Metadata = {
+  title: "Gëstro - App de Gestión de Restaurante",
+  description: "Gestiona tu restaurante y ofrece pedidos por QR a tus clientes",
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
+  return (
+    <html lang="es" suppressHydrationWarning>
+      <body suppressHydrationWarning>
+        <div className="min-h-screen p-4">
+          {children}
+        </div>
+      </body>
+    </html>
+  )
+}

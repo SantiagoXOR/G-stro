@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { ChevronLeft, Heart, Minus, Plus, ShoppingCart, Star } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getProductById, Product } from "@/lib/services/products"
@@ -14,6 +13,7 @@ import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { ProductReviews } from "@/components/product-reviews"
+import { SafeImage } from "@/components/safe-image"
 
 
 
@@ -109,12 +109,13 @@ export default function MenuItemPage({ params }: { params: { id: string } }) {
 
       {/* Product Image */}
       <div className="relative h-64 w-full">
-        <Image
-          src={product.image_url || "/placeholder.svg"}
+        <SafeImage
+          src={product.image_url}
           alt={product.name}
           fill
           className="object-cover"
           priority
+          fallbackSrc="/placeholder.svg"
         />
       </div>
 

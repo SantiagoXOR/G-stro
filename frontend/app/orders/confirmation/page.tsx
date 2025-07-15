@@ -1,21 +1,21 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { CheckCircle2, ChevronRight, Clock, ShoppingBag } from "lucide-react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { getOrderWithItems, Order, OrderItem } from "@/lib/services/orders"
-import { useAuth } from "@/components/auth-provider"
+import { useUser } from "@clerk/nextjs"
 import { toast } from "sonner"
 import { ShareOrderButton } from "@/components/share-order-button"
 
-export default function OrderConfirmationPage() {
+function OrderConfirmationContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const orderId = searchParams.get("id")
-  const { user } = useAuth()
+  const { user } = useUser()
   const [order, setOrder] = useState<Order | null>(null)
   const [orderItems, setOrderItems] = useState<OrderItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -185,5 +185,21 @@ export default function OrderConfirmationPage() {
         </Link>
       </div>
     </div>
+  )
+}
+
+// Componente principal con Suspense boundary
+export default function OrderConfirmationPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Cargando confirmación...</p>
+        </div>
+      </div>
+    }>
+      <OrderConfirmationContent />
+    </Suspense>
   )
 }

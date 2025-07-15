@@ -1,0 +1,179 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Códigos QR - Todas las Mesas - Gëstro</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #112D1C 0%, #1a4d2e 100%);
+            color: white;
+            border-radius: 15px;
+        }
+        
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: -1px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .table-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 2px solid #112D1C;
+        }
+        
+        .table-number {
+            background: #112D1C;
+            color: #FAECD8;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        
+        .qr-code {
+            margin: 15px 0;
+        }
+        
+        .qr-code img {
+            border: 2px solid #112D1C;
+            border-radius: 8px;
+        }
+        
+        .url {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            margin-top: 10px;
+            word-break: break-all;
+            color: #333;
+        }
+        
+        .print-instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 30px auto;
+            max-width: 600px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        @media print {
+            .print-instructions {
+                display: none;
+            }
+            
+            .grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .table-card {
+                break-inside: avoid;
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">Gëstro</div>
+        <p>Códigos QR para todas las mesas</p>
+    </div>
+    
+    <div class="print-instructions">
+        <h3>📋 Instrucciones de Impresión</h3>
+        <ul>
+            <li>Usa papel de buena calidad para mejor durabilidad</li>
+            <li>Imprime en color para mejor presentación</li>
+            <li>Plastifica los códigos QR para protegerlos</li>
+            <li>Coloca cada código QR en su mesa correspondiente</li>
+            <li>Asegúrate de que los códigos QR sean fácilmente escaneables</li>
+        </ul>
+    </div>
+    
+    <div class="grid">
+        
+            <div class="table-card">
+                <div class="table-number">Mesa 1</div>
+                <div class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fgestro.vercel.app%2Fscan%3Ftable%3D1" alt="QR Mesa 1">
+                </div>
+                <div class="url">https://gestro.vercel.app/scan?table=1</div>
+            </div>
+        
+            <div class="table-card">
+                <div class="table-number">Mesa 2</div>
+                <div class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fgestro.vercel.app%2Fscan%3Ftable%3D2" alt="QR Mesa 2">
+                </div>
+                <div class="url">https://gestro.vercel.app/scan?table=2</div>
+            </div>
+        
+            <div class="table-card">
+                <div class="table-number">Mesa 3</div>
+                <div class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fgestro.vercel.app%2Fscan%3Ftable%3D3" alt="QR Mesa 3">
+                </div>
+                <div class="url">https://gestro.vercel.app/scan?table=3</div>
+            </div>
+        
+            <div class="table-card">
+                <div class="table-number">Mesa 4</div>
+                <div class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fgestro.vercel.app%2Fscan%3Ftable%3D4" alt="QR Mesa 4">
+                </div>
+                <div class="url">https://gestro.vercel.app/scan?table=4</div>
+            </div>
+        
+            <div class="table-card">
+                <div class="table-number">Mesa 5</div>
+                <div class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fgestro.vercel.app%2Fscan%3Ftable%3D5" alt="QR Mesa 5">
+                </div>
+                <div class="url">https://gestro.vercel.app/scan?table=5</div>
+            </div>
+        
+            <div class="table-card">
+                <div class="table-number">Mesa 6</div>
+                <div class="qr-code">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https%3A%2F%2Fgestro.vercel.app%2Fscan%3Ftable%3D6" alt="QR Mesa 6">
+                </div>
+                <div class="url">https://gestro.vercel.app/scan?table=6</div>
+            </div>
+        
+    </div>
+    
+    <div style="text-align: center; margin-top: 40px; color: #666;">
+        <p>🍽️ Gëstro - Sistema de Pedidos QR</p>
+        <p>Generado el 26/5/2025</p>
+    </div>
+</body>
+</html>

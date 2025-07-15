@@ -1,6 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+// Forzar renderizado dinámico para evitar problemas de prerendering
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { getTableByNumber } from "@/lib/services/tables"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -8,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Info, X } from "lucide-react"
 
-export default function MenuLayout({ children }: { children: React.ReactNode }) {
+function MenuLayoutContent({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams()
   const tableNumber = searchParams.get("table")
   const [tableInfo, setTableInfo] = useState<{ number: number; location?: string } | null>(null)
@@ -74,5 +77,18 @@ export default function MenuLayout({ children }: { children: React.ReactNode }) 
       )}
       {children}
     </>
+  )
+}
+
+// Componente principal con Suspense boundary
+export default function MenuLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={
+      <div>
+        {children}
+      </div>
+    }>
+      <MenuLayoutContent>{children}</MenuLayoutContent>
+    </Suspense>
   )
 }

@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/auth-provider"
+import { useUser, useSignIn, useSignUp } from "@clerk/nextjs"
+import { isInOfflineMode } from "@/lib/offline-mode"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,10 +21,20 @@ export function AuthForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const router = useRouter()
-  const { signIn, signInWithGoogle, signUp, user } = useAuth()
+
+  // Hooks de Clerk para modo online
+  const { user: clerkUser } = useUser()
+  const { signIn: clerkSignIn, isLoaded: signInLoaded } = useSignIn()
+  const { signUp: clerkSignUp, isLoaded: signUpLoaded } = useSignUp()
+
+  // AuthProvider personalizado para modo offline
+  const { signIn: offlineSignIn, signInWithGoogle: offlineSignInWithGoogle, signUp: offlineSignUp, user: offlineUser } = useAuth()
+
+  // Determinar el usuario actual basado en el modo
+  const currentUser = isInOfflineMode() ? offlineUser : clerkUser
 
   // Si el usuario ya está autenticado, redirigir a la página principal
-  if (user) {
+  if (currentUser) {
     router.push("/")
     return null
   }
@@ -58,40 +70,66 @@ export function AuthForm() {
     setIsSubmitting(true)
 
     try {
-      if (isLogin) {
-        // Iniciar sesión
-        const { error } = await signIn({
-          email,
-          password,
-        })
-
-        if (error) {
-          throw new Error(error.message)
+      if (isInOfflineMode()) {
+        // Modo offline: usar AuthProvider personalizado
+        if (isLogin) {
+          const { error } = await offlineSignIn(email, password)
+          if (error) {
+            throw new Error(error.message)
+          }
+          toast.success("Inicio de sesión exitoso (modo offline)")
+        } else {
+          const { error } = await offlineSignUp(email, password, name)
+          if (error) {
+            throw new Error(error.message)
+          }
+          toast.success("Cuenta creada correctamente (modo offline)")
+          setIsLogin(true)
         }
-
-        toast.success("Inicio de sesión exitoso")
         router.push("/")
       } else {
-        // Registrarse
-        const { error } = await signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name,
-              role: "customer"
-            }
+        // Modo online: usar Clerk
+        if (isLogin) {
+          if (!signInLoaded || !clerkSignIn) {
+            throw new Error("Servicio de autenticación no disponible")
           }
-        })
 
-        if (error) {
-          throw new Error(error.message)
+          const result = await clerkSignIn.create({
+            identifier: email,
+            password,
+          })
+
+          if (result.status === "complete") {
+            toast.success("Inicio de sesión exitoso")
+            router.push("/")
+          } else {
+            throw new Error("Error al completar el inicio de sesión")
+          }
+        } else {
+          if (!signUpLoaded || !clerkSignUp) {
+            throw new Error("Servicio de registro no disponible")
+          }
+
+          const result = await clerkSignUp.create({
+            emailAddress: email,
+            password,
+            firstName: name.split(' ')[0] || name,
+            lastName: name.split(' ').slice(1).join(' ') || '',
+          })
+
+          if (result.status === "complete") {
+            toast.success("Cuenta creada correctamente")
+            router.push("/")
+          } else if (result.status === "missing_requirements") {
+            toast.success("Verifica tu correo electrónico para completar el registro")
+            setIsLogin(true)
+          } else {
+            throw new Error("Error al completar el registro")
+          }
         }
-
-        toast.success("Cuenta creada correctamente. Verifica tu correo electrónico.")
-        setIsLogin(true)
       }
     } catch (error) {
+      console.error("Error en autenticación:", error)
       toast.error(error instanceof Error ? error.message : "Error en la autenticación")
     } finally {
       setIsSubmitting(false)
@@ -183,11 +221,26 @@ export function AuthForm() {
             onClick={async () => {
               setIsSubmitting(true)
               try {
-                const { error } = await signInWithGoogle()
-                if (error) {
-                  toast.error(error.message || "Error al iniciar sesión con Google")
+                if (isInOfflineMode()) {
+                  // Modo offline: usar AuthProvider personalizado
+                  const { error } = await offlineSignInWithGoogle()
+                  if (error) {
+                    toast.error(error.message || "Error al iniciar sesión con Google (modo offline)")
+                  }
+                } else {
+                  // Modo online: usar Clerk
+                  if (!signInLoaded || !clerkSignIn) {
+                    throw new Error("Servicio de autenticación no disponible")
+                  }
+
+                  await clerkSignIn.authenticateWithRedirect({
+                    strategy: "oauth_google",
+                    redirectUrl: "/auth/sso-callback",
+                    redirectUrlComplete: "/",
+                  })
                 }
               } catch (error) {
+                console.error("Error al iniciar sesión con Google:", error)
                 toast.error("Error al iniciar sesión con Google")
               } finally {
                 setIsSubmitting(false)

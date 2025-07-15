@@ -6,61 +6,65 @@ describe('Autenticación con Google', () => {
     // Limpiar el localStorage para asegurar que no hay sesión activa
     cy.window().then((win) => {
       win.localStorage.clear()
+      win.sessionStorage.clear()
     })
   })
 
   it('debería mostrar el botón de inicio de sesión con Google', () => {
     // Ir a la página de login
-    cy.visit('/auth/login')
+    cy.visit('/auth/sign-in')
 
-    // Verificar que se muestra el botón de Google
-    cy.get('button').contains(/google/i).should('be.visible')
+    // Verificar que el formulario de Clerk está cargado
+    cy.get('.cl-rootBox, .cl-card', { timeout: 10000 }).should('be.visible')
+
+    // Verificar que hay botones disponibles (Clerk renderiza Google automáticamente)
+    cy.get('button').should('have.length.at.least', 1)
   })
 
-  it('debería tener un botón de Google funcional', () => {
+  it('debería cargar correctamente la página de autenticación', () => {
     // Ir a la página de login
-    cy.visit('/auth/login')
+    cy.visit('/auth/sign-in')
 
-    // Verificar que el botón de Google tiene un evento onClick
-    cy.get('button').contains(/google/i).should('have.attr', 'type', 'button')
+    // Verificar que estamos en la página correcta
+    cy.url().should('include', '/auth/sign-in')
+    cy.contains('Iniciar sesión en Gëstro').should('be.visible')
+
+    // Verificar que el componente de Clerk está presente
+    cy.get('.cl-rootBox, .cl-card').should('be.visible')
   })
 
-  it('debería mostrar la página de diagnóstico de autenticación', () => {
-    // Ir a la página de diagnóstico
-    cy.visit('/auth/debug')
+  it('debería permitir navegación entre login y registro', () => {
+    // Ir a la página de login
+    cy.visit('/auth/sign-in')
 
-    // Verificar que se muestra la página de diagnóstico
-    cy.contains('Diagnóstico de Autenticación').should('be.visible')
+    // Verificar que estamos en login
+    cy.contains('Iniciar sesión en Gëstro').should('be.visible')
 
-    // Verificar que se muestra la sección de configuración de Supabase
-    cy.contains('Configuración de Supabase').should('be.visible')
+    // Navegar a registro
+    cy.get('a[href="/auth/sign-up"]').click()
 
-    // Verificar que se muestra la sección de LocalStorage
-    cy.contains('LocalStorage').should('be.visible')
+    // Verificar que estamos en registro
+    cy.url().should('include', '/auth/sign-up')
+    cy.contains('Crear cuenta en Gëstro').should('be.visible')
   })
 
-  it('debería mostrar los botones de prueba de autenticación con Google', () => {
-    // Ir a la página de diagnóstico
-    cy.visit('/auth/debug')
+  it('debería redirigir rutas protegidas a autenticación', () => {
+    // Intentar acceder a una ruta protegida
+    cy.visit('/profile')
 
-    // Verificar que se muestra la sección de pruebas de autenticación
-    cy.contains('Pruebas de Autenticación').should('be.visible')
-
-    // Verificar que se muestra el botón de prueba de autenticación con Google desde el cliente
-    cy.contains('Iniciar prueba cliente').should('be.visible')
-
-    // Verificar que se muestra el botón de prueba de autenticación con Google desde el servidor
-    cy.contains('Iniciar prueba servidor').should('be.visible')
+    // Verificar que se redirige a login
+    cy.url().should('include', '/auth/sign-in')
+    cy.contains('Iniciar sesión en Gëstro').should('be.visible')
   })
 
-  it('debería mostrar los botones de reparación de perfiles', () => {
-    // Ir a la página de diagnóstico
-    cy.visit('/auth/debug')
+  it('debería mostrar elementos de autenticación social', () => {
+    // Ir a la página de registro para ver más opciones sociales
+    cy.visit('/auth/sign-up')
 
-    // Verificar que se muestra el botón de verificar y reparar perfiles
-    cy.contains('Verificar y reparar perfiles').should('be.visible')
+    // Verificar que el formulario de Clerk está presente
+    cy.get('.cl-rootBox, .cl-card', { timeout: 10000 }).should('be.visible')
 
-    // Verificar que se muestra el botón de reparar políticas RLS
-    cy.contains('Reparar políticas RLS').should('be.visible')
+    // Verificar que hay elementos interactivos
+    cy.get('button, input').should('have.length.at.least', 1)
   })
 })

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Share2, Copy, Check, Facebook, Twitter, WhatsApp } from "lucide-react"
+import { Share2, Copy, Check, Facebook, Twitter, MessageCircle } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -123,7 +123,7 @@ export function ShareOrderButton({
           <DropdownMenuLabel>Compartir pedido</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => shareOnSocial("whatsapp")}>
-            <WhatsApp className="h-4 w-4 mr-2 text-green-500" />
+            <MessageCircle className="h-4 w-4 mr-2 text-green-500" />
             WhatsApp
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => shareOnSocial("facebook")}>

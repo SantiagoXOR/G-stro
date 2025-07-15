@@ -13,7 +13,7 @@ import { ChevronLeft, Download, Printer, QrCode, RefreshCw, Share2 } from "lucid
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import QRCode from "qrcode.react"
+import { QRCodeSVG as QRCode } from "qrcode.react"
 import { getAllTables, Table } from "@/lib/services/tables"
 
 export default function TableQRCodesPage() {

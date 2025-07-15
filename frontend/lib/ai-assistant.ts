@@ -1,5 +1,5 @@
 // Importamos directamente las funciones que necesitamos
-import { supabase } from './supabase'
+import { getSupabaseClient } from './supabase-client'
 import { generateResponse, generateActionResponse, Message, Context } from './ollama-service'
 
 /**

@@ -127,24 +127,33 @@ describe('MercadoPago Service', () => {
     })
 
     it('handles network errors correctly', async () => {
+      // Mock console.error para evitar ruido en los tests
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation()
+
       // Mock de fetch con excepción
       ;(global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'))
-      
+
       // Datos de prueba
       const transactionId = 'test-transaction-id'
       const paymentData = {
         method: 'mercadopago',
         token: 'test-token'
       }
-      
+
       // Ejecutar la función
       const result = await processPayment(transactionId, paymentData)
-      
+
       // Verificar resultado
       expect(result).toEqual({
         success: false,
         error: 'Error de conexión al procesar el pago'
       })
+
+      // Verificar que se registró el error
+      expect(consoleSpy).toHaveBeenCalledWith('Error al procesar pago:', expect.any(Error))
+
+      // Restaurar console.error
+      consoleSpy.mockRestore()
     })
   })
 })

@@ -1,25 +1,40 @@
-import { supabase } from "@/lib/supabase"
+import { getSupabaseClient } from "@/lib/supabase-client"
 import type { Database } from "../../../shared/types/database.types"
 
 export type Reservation = Database["public"]["Tables"]["reservations"]["Row"]
 export type Table = Database["public"]["Tables"]["tables"]["Row"]
 
+// Helper function para obtener el cliente de Supabase de forma segura
+async function getSupabase() {
+  const client = await getSupabaseClient()
+  if (!client) {
+    throw new Error('Cliente de Supabase no disponible')
+  }
+  return client
+}
+
 /**
  * Obtiene todas las reservas del usuario actual
  */
 export async function getUserReservations(userId: string): Promise<Reservation[]> {
-  const { data, error } = await supabase
-    .from("reservations")
-    .select("*, table:tables(*)")
-    .eq("customer_id", userId)
-    .order("reservation_date", { ascending: false })
+  try {
+    const supabase = await getSupabase()
+    const { data, error } = await supabase
+      .from("reservations")
+      .select("*, table:tables(*)")
+      .eq("customer_id", userId)
+      .order("reservation_date", { ascending: false })
 
-  if (error) {
-    console.error("Error al obtener reservas del usuario:", error)
-    throw error
+    if (error) {
+      console.error("Error al obtener reservas del usuario:", error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error inesperado al obtener reservas:", error)
+    return []
   }
-
-  return data || []
 }
 
 /**

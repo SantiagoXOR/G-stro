@@ -125,6 +125,23 @@ npm run supabase:setup
 
 Para más detalles, consulta la [guía de migraciones de Supabase](docs/migraciones-supabase.md).
 
+### Configuración de Autenticación (Clerk)
+
+El proyecto utiliza Clerk para la autenticación. Para configurar las credenciales de producción:
+
+```bash
+# Configurar credenciales de Clerk
+npm run clerk:setup
+
+# Verificar la integración
+npm run clerk:verify
+
+# Probar el flujo de autenticación
+npm run clerk:test
+```
+
+Para más detalles, consulta la [guía de configuración de Clerk](docs/configuracion-clerk-produccion.md).
+
 ## Pruebas
 
 ### Pruebas Unitarias

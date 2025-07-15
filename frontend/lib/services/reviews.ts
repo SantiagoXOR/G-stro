@@ -1,26 +1,41 @@
-import { supabase } from "@/lib/supabase"
+import { getSupabaseClient } from "@/lib/supabase-client"
 import type { Database } from "../../../shared/types/database.types"
 
 export type Review = Database["public"]["Tables"]["reviews"]["Row"]
 export type ReviewReaction = Database["public"]["Tables"]["review_reactions"]["Row"]
 
+// Helper function para obtener el cliente de Supabase de forma segura
+async function getSupabase() {
+  const client = await getSupabaseClient()
+  if (!client) {
+    throw new Error('Cliente de Supabase no disponible')
+  }
+  return client
+}
+
 /**
  * Obtiene las reseñas de un producto
  */
 export async function getProductReviews(productId: string): Promise<Review[]> {
-  const { data, error } = await supabase
-    .from("reviews")
-    .select("*, user:profiles(full_name, avatar_url)")
-    .eq("product_id", productId)
-    .eq("is_published", true)
-    .order("created_at", { ascending: false })
+  try {
+    const supabase = await getSupabase()
+    const { data, error } = await supabase
+      .from("reviews")
+      .select("*, user:profiles(full_name, avatar_url)")
+      .eq("product_id", productId)
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
 
-  if (error) {
-    console.error("Error al obtener reseñas del producto:", error)
-    throw error
+    if (error) {
+      console.error("Error al obtener reseñas del producto:", error)
+      throw error
+    }
+
+    return data || []
+  } catch (error) {
+    console.error("Error inesperado al obtener reseñas:", error)
+    return []
   }
-
-  return data || []
 }
 
 /**

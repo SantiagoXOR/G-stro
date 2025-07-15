@@ -8,7 +8,7 @@ import { ChevronLeft, Filter, Search, ShoppingBag } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getUserOrders, Order } from "@/lib/services/orders"
-import { useAuth } from "@/components/auth-provider"
+import { useUser } from "@clerk/nextjs"
 import { toast } from "sonner"
 import { isInOfflineMode, offlineData } from "@/lib/offline-mode"
 import { Input } from "@/components/ui/input"
@@ -71,7 +71,7 @@ function OrderStatusBadge({ status }: { status: Order["status"] }) {
 
 export default function OrderHistoryPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user } = useUser()
   const [orders, setOrders] = useState<Order[]>([])
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)

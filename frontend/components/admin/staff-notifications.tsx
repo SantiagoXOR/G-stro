@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { toast } from "sonner"
-import { supabase } from "@/lib/supabase"
+import { getSupabaseClient } from "@/lib/supabase"
 import { Order } from "@/lib/services/orders"
 import { useRouter } from "next/navigation"
 import { Bell } from "lucide-react"
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { OrderStatusBadge } from "@/components/ui/order-status-badge"
+import type { SupabaseClient } from "@supabase/supabase-js"
 
 interface Notification {
   id: string
@@ -36,20 +37,53 @@ export function StaffNotifications() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [showNotifications, setShowNotifications] = useState(true)
   const [playSounds, setPlaySounds] = useState(true)
+  const [supabaseClient, setSupabaseClient] = useState<SupabaseClient | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  // Inicializar cliente de Supabase
+  useEffect(() => {
+    async function initializeSupabase() {
+      try {
+        const client = await getSupabaseClient()
+        setSupabaseClient(client)
+        console.log('✅ Cliente de Supabase inicializado para notificaciones')
+      } catch (error) {
+        console.error('❌ Error inicializando cliente de Supabase:', error)
+      }
+    }
+
+    initializeSupabase()
+  }, [])
 
   // Inicializar audio
   useEffect(() => {
-    audioRef.current = new Audio("/sounds/notification.mp3")
-    
+    try {
+      audioRef.current = new Audio("/sounds/notification.mp3")
+
+      // Precargar el audio para evitar retrasos
+      audioRef.current.preload = "auto"
+
+      // Manejar errores de carga del audio
+      audioRef.current.addEventListener('error', (e) => {
+        console.warn('No se pudo cargar el archivo de sonido de notificación:', e)
+      })
+
+      // Verificar que el audio se puede reproducir
+      audioRef.current.addEventListener('canplaythrough', () => {
+        console.log('✅ Archivo de sonido de notificación cargado correctamente')
+      })
+    } catch (error) {
+      console.warn('Error inicializando audio de notificaciones:', error)
+    }
+
     // Cargar configuración de localStorage
     const showNotificationsConfig = localStorage.getItem("staff-show-notifications")
     const playSoundsConfig = localStorage.getItem("staff-play-sounds")
-    
+
     if (showNotificationsConfig !== null) {
       setShowNotifications(showNotificationsConfig === "true")
     }
-    
+
     if (playSoundsConfig !== null) {
       setPlaySounds(playSoundsConfig === "true")
     }
@@ -63,8 +97,22 @@ export function StaffNotifications() {
 
   // Suscribirse a cambios en los pedidos
   useEffect(() => {
+    // Solo proceder si tenemos el cliente de Supabase
+    if (!supabaseClient) {
+      console.log('⏳ Esperando cliente de Supabase para configurar notificaciones...')
+      return
+    }
+
+    // Verificar que el cliente tiene la función channel
+    if (typeof supabaseClient.channel !== 'function') {
+      console.error('❌ El cliente de Supabase no tiene la función channel disponible')
+      return
+    }
+
+    console.log('🔔 Configurando suscripciones de notificaciones...')
+
     // Suscribirse a nuevos pedidos
-    const newOrdersSubscription = supabase
+    const newOrdersSubscription = supabaseClient
       .channel('new-orders')
       .on(
         'postgres_changes',
@@ -75,7 +123,7 @@ export function StaffNotifications() {
         },
         (payload) => {
           const newOrder = payload.new as Order
-          
+
           // Crear notificación
           const notification: Notification = {
             id: `new-order-${newOrder.id}`,
@@ -87,10 +135,10 @@ export function StaffNotifications() {
             timestamp: new Date(),
             read: false
           }
-          
+
           // Añadir notificación
           addNotification(notification)
-          
+
           // Mostrar toast si está habilitado
           if (showNotifications) {
             toast.info("Nuevo pedido recibido", {
@@ -101,17 +149,27 @@ export function StaffNotifications() {
               }
             })
           }
-          
+
           // Reproducir sonido si está habilitado
           if (playSounds && audioRef.current) {
-            audioRef.current.play().catch(e => console.error("Error al reproducir sonido:", e))
+            audioRef.current.currentTime = 0 // Reiniciar el audio desde el inicio
+            audioRef.current.play().catch(e => {
+              console.warn("No se pudo reproducir el sonido de notificación:", e)
+              // Intentar recargar el audio si falló
+              try {
+                audioRef.current = new Audio("/sounds/notification.mp3")
+                audioRef.current.preload = "auto"
+              } catch (reloadError) {
+                console.warn("Error recargando audio:", reloadError)
+              }
+            })
           }
         }
       )
       .subscribe()
 
     // Suscribirse a cambios de estado en pedidos
-    const orderStatusSubscription = supabase
+    const orderStatusSubscription = supabaseClient
       .channel('order-status-changes')
       .on(
         'postgres_changes',
@@ -124,10 +182,10 @@ export function StaffNotifications() {
         (payload) => {
           const updatedOrder = payload.new as Order
           const oldOrder = payload.old as Order
-          
+
           // Solo notificar si el estado ha cambiado
           if (updatedOrder.status === oldOrder.status) return
-          
+
           // Crear notificación
           const notification: Notification = {
             id: `status-change-${updatedOrder.id}-${Date.now()}`,
@@ -139,10 +197,10 @@ export function StaffNotifications() {
             timestamp: new Date(),
             read: false
           }
-          
+
           // Añadir notificación
           addNotification(notification)
-          
+
           // Mostrar toast si está habilitado
           if (showNotifications) {
             toast[getNotificationType(updatedOrder.status)]("Estado de pedido actualizado", {
@@ -153,21 +211,34 @@ export function StaffNotifications() {
               }
             })
           }
-          
+
           // Reproducir sonido si está habilitado
           if (playSounds && audioRef.current) {
-            audioRef.current.play().catch(e => console.error("Error al reproducir sonido:", e))
+            audioRef.current.currentTime = 0 // Reiniciar el audio desde el inicio
+            audioRef.current.play().catch(e => {
+              console.warn("No se pudo reproducir el sonido de notificación:", e)
+              // Intentar recargar el audio si falló
+              try {
+                audioRef.current = new Audio("/sounds/notification.mp3")
+                audioRef.current.preload = "auto"
+              } catch (reloadError) {
+                console.warn("Error recargando audio:", reloadError)
+              }
+            })
           }
         }
       )
       .subscribe()
 
+    console.log('✅ Suscripciones de notificaciones configuradas')
+
     // Limpiar suscripciones al desmontar
     return () => {
+      console.log('🧹 Limpiando suscripciones de notificaciones...')
       newOrdersSubscription.unsubscribe()
       orderStatusSubscription.unsubscribe()
     }
-  }, [router, showNotifications, playSounds])
+  }, [supabaseClient, router, showNotifications, playSounds])
 
   // Actualizar contador de no leídos
   useEffect(() => {

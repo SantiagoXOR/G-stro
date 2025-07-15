@@ -1,92 +1,214 @@
-import { supabase } from './supabase'
+/**
+ * Servicios de autenticación
+ * Proporciona una interfaz unificada para la autenticación
+ */
+
+import {
+  getSupabaseClient,
+  signInWithEmail,
+  signUpWithEmail,
+  signInWithOAuth,
+  signOut,
+  getCurrentSession,
+  getCurrentUser,
+  onAuthStateChange
+} from './supabase-client'
+
+// Re-exportar funciones de Supabase para mantener compatibilidad
+export { signInWithEmail, signUpWithEmail, signOut }
+export const signInWithGoogle = (redirectTo?: string) => signInWithOAuth('google', redirectTo)
+export const getSession = getCurrentSession
+export const getUser = getCurrentUser
 
 /**
- * Inicia sesión con email y contraseña
+ * Hook para escuchar cambios en el estado de autenticación
  */
-export async function signInWithEmail(email: string, password: string) {
+export function useAuthStateChange(callback: (event: string, session: any) => void) {
+  return onAuthStateChange(callback)
+}
+
+/**
+ * Verifica si el usuario está autenticado
+ */
+export async function isAuthenticated(): Promise<boolean> {
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const session = await getCurrentSession()
+    return !!session
+  } catch (error) {
+    console.error('Error verificando autenticación:', error)
+    return false
+  }
+}
+
+/**
+ * Obtiene el perfil del usuario actual
+ */
+export async function getUserProfile() {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return null
+
+    const client = await getSupabaseClient()
+    const { data, error } = await client
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+
+    if (error) {
+      console.error('Error obteniendo perfil:', error)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error al obtener perfil:', error)
+    return null
+  }
+}
+
+/**
+ * Actualiza el perfil del usuario
+ */
+export async function updateUserProfile(updates: {
+  full_name?: string
+  avatar_url?: string
+}) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) throw new Error('Usuario no autenticado')
+
+    const client = await getSupabaseClient()
+    const { data, error } = await client
+      .from('profiles')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Error actualizando perfil:', error)
+      throw error
+    }
+
+    return data
+  } catch (error) {
+    console.error('Error al actualizar perfil:', error)
+    throw error
+  }
+}
+
+/**
+ * Cambia la contraseña del usuario
+ */
+export async function changePassword(newPassword: string) {
+  try {
+    const client = await getSupabaseClient()
+    const { error } = await client.auth.updateUser({
+      password: newPassword
     })
-    return { data, error }
+
+    if (error) {
+      console.error('Error cambiando contraseña:', error)
+      throw error
+    }
+
+    return { success: true }
   } catch (error) {
-    console.error('Error al iniciar sesión con email:', error)
-    return { data: null, error }
+    console.error('Error al cambiar contraseña:', error)
+    throw error
   }
 }
 
 /**
- * Inicia sesión con Google
- * Esta función redirige al usuario a la página de autenticación de Google
+ * Envía un email de recuperación de contraseña
  */
-export async function signInWithGoogle() {
+export async function resetPassword(email: string) {
   try {
-    // Guardar la URL actual para redirigir después de la autenticación
-    const currentUrl = window.location.origin
-
-    // Iniciar el flujo de autenticación con Google
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${currentUrl}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        },
-      },
+    const client = await getSupabaseClient()
+    const { error } = await client.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`
     })
 
-    return { data, error }
+    if (error) {
+      console.error('Error enviando email de recuperación:', error)
+      throw error
+    }
+
+    return { success: true }
   } catch (error) {
-    console.error('Error al iniciar sesión con Google:', error)
-    return { data: null, error }
+    console.error('Error al enviar email de recuperación:', error)
+    throw error
   }
 }
 
 /**
- * Registra un nuevo usuario con email y contraseña
+ * Verifica el email del usuario
  */
-export async function signUpWithEmail(email: string, password: string, metadata?: any) {
+export async function verifyEmail(token: string) {
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata,
-      },
+    const client = await getSupabaseClient()
+    const { error } = await client.auth.verifyOtp({
+      token_hash: token,
+      type: 'email'
     })
-    return { data, error }
+
+    if (error) {
+      console.error('Error verificando email:', error)
+      throw error
+    }
+
+    return { success: true }
   } catch (error) {
-    console.error('Error al registrar usuario:', error)
-    return { data: null, error }
+    console.error('Error al verificar email:', error)
+    throw error
   }
 }
 
 /**
- * Cierra la sesión del usuario actual
+ * Obtiene los roles del usuario
  */
-export async function signOut() {
+export async function getUserRoles() {
   try {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    const user = await getCurrentUser()
+    if (!user) return []
+
+    // Los roles pueden estar en los metadatos del usuario
+    const roles = user.user_metadata?.roles || user.app_metadata?.roles || []
+    return Array.isArray(roles) ? roles : [roles].filter(Boolean)
   } catch (error) {
-    console.error('Error al cerrar sesión:', error)
-    return { error }
+    console.error('Error obteniendo roles:', error)
+    return []
   }
 }
 
 /**
- * Obtiene la sesión actual del usuario
+ * Verifica si el usuario tiene un rol específico
  */
-export async function getSession() {
+export async function hasRole(role: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.auth.getSession()
-    return { data, error }
+    const roles = await getUserRoles()
+    return roles.includes(role)
   } catch (error) {
-    console.error('Error al obtener sesión:', error)
-    return { data: null, error }
+    console.error('Error verificando rol:', error)
+    return false
   }
 }
 
+/**
+ * Verifica si el usuario es administrador
+ */
+export async function isAdmin(): Promise<boolean> {
+  return hasRole('admin')
+}
 
+/**
+ * Verifica si el usuario es staff
+ */
+export async function isStaff(): Promise<boolean> {
+  const roles = await getUserRoles()
+  return roles.some(role => ['admin', 'staff', 'waiter', 'kitchen'].includes(role))
+}

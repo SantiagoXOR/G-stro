@@ -16,6 +16,11 @@
     "supabase:types": "node scripts/generate-types.js",
     "supabase:check": "node scripts/check-supabase-security-simple.js",
     "supabase:prepare": "node scripts/prepare-migrations.js",
+    "clerk:setup": "node scripts/setup-clerk-production.js",
+    "clerk:verify": "node scripts/verify-clerk-integration.js",
+    "clerk:test": "node scripts/test-clerk-auth-flow.js",
+    "clerk:complete": "node scripts/complete-clerk-setup.js",
+    "clerk:diagnose": "node scripts/diagnose-clerk-error.js",
     "check:auth-profile": "node scripts/check-auth-profile.js",
     "supabase:split": "node scripts/apply-migrations-by-parts.js",
     "supabase:fix": "node scripts/fix-migrations.js"
@@ -27,12 +32,21 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@clerk/localizations": "^3.16.0",
     "@mercadopago/sdk-react": "^1.0.2",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
     "@supabase/ssr": "^0.6.1",
-    "@supabase/supabase-js": "^2.49.4",
+    "@supabase/supabase-js": "^2.49.8",
     "better-auth": "^1.2.7",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
     "mapbox-gl": "^3.11.0",
-    "mercadopago": "^2.4.0"
+    "mercadopago": "^2.4.0",
+    "recharts": "^2.15.3",
+    "svix": "^1.66.0"
+  },
+  "devDependencies": {
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^24.9.0"
   }
 }

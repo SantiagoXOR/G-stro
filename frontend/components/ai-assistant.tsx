@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Bot, Send, User, X, ShoppingCart, Calendar, Menu, Search } from "lucide-react"
-import { useAuth } from "@/components/auth-provider"
+import { useUser } from "@clerk/nextjs"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
@@ -28,7 +28,18 @@ export default function AIAssistant() {
   const [isLoading, setIsLoading] = useState(false)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { user } = useAuth()
+
+  // Hook seguro para Clerk que maneja la ausencia del provider
+  const useUserSafe = () => {
+    try {
+      return useUser()
+    } catch (error) {
+      console.warn('Clerk no está disponible, usando usuario mock')
+      return { user: null, isLoaded: true, isSignedIn: false }
+    }
+  }
+
+  const { user } = useUserSafe()
 
   // Actualizar sugerencias basadas en la conversación
   useEffect(() => {

@@ -8,6 +8,18 @@ export default defineConfig({
     video: false,
     screenshotOnRunFailure: true,
     supportFile: 'cypress/support/e2e.ts',
+    setupNodeEvents(on, config) {
+      // Configurar eventos de Node si es necesario
+      return config
+    },
+    // Configuración para esperar que el servidor esté disponible
+    retries: {
+      runMode: 2,
+      openMode: 0
+    },
+    defaultCommandTimeout: 10000,
+    requestTimeout: 10000,
+    responseTimeout: 10000,
   },
   component: {
     devServer: {

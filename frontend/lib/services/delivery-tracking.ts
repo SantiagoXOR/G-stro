@@ -1,9 +1,18 @@
-import { supabase } from "@/lib/supabase"
+import { getSupabaseClient } from "@/lib/supabase-client"
 import type { Database } from "../../../shared/types/database.types"
 
 export type DeliveryDriver = Database["public"]["Tables"]["delivery_drivers"]["Row"]
 export type DriverLocation = Database["public"]["Tables"]["driver_locations"]["Row"]
 export type DeliveryEstimate = Database["public"]["Tables"]["delivery_estimates"]["Row"]
+
+// Helper function para obtener el cliente de Supabase de forma segura
+async function getSupabase() {
+  const client = await getSupabaseClient()
+  if (!client) {
+    throw new Error('Cliente de Supabase no disponible')
+  }
+  return client
+}
 
 /**
  * Obtiene la ubicación actual del repartidor asignado a un pedido

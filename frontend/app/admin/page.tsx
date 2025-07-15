@@ -5,6 +5,7 @@ import TableGrid from "@/components/table-grid"
 import RecentOrders from "@/components/recent-orders"
 import InventoryAlerts from "@/components/inventory-alerts"
 import SalesChart from "@/components/sales-chart"
+import { SoundTest } from "@/components/admin/sound-test"
 import { Button } from "@/components/ui/button"
 import { CalendarDays, Clock, Download, RefreshCw } from "lucide-react"
 
@@ -101,6 +102,13 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Componente de prueba de sonido - Solo en desarrollo */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="flex justify-end">
+          <SoundTest />
+        </div>
+      )}
     </div>
   )
 }

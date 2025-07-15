@@ -6,28 +6,35 @@ import { Award, ChevronRight, CreditCard, Heart, HelpCircle, LogOut, MapPin, Set
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { useAuth } from "@/components/auth-provider"
-import { supabase } from "@/lib/supabase"
+import { useAuth, useUser } from "@clerk/nextjs"
+import { getSupabaseClient } from "@/lib/supabase-client"
 import type { Database } from "../../shared/types/database.types"
 import { OrderStatusBadge } from "@/components/ui/order-status-badge"
 import { toast } from "sonner"
 import { getOrCreateUserProfile } from "@/lib/services/profiles"
+import { ProfileErrorBoundary } from "@/components/profile-error-boundary"
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"]
 type Order = Database["public"]["Tables"]["orders"]["Row"]
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const [activeTab, setActiveTab] = useState("orders")
   const router = useRouter()
-  const { user, signOut } = useAuth()
+  const { signOut } = useAuth()
+  const { user: clerkUser, isLoaded: clerkIsLoaded } = useUser()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     // Redirigir si no hay usuario autenticado
-    if (!user) {
-      router.push("/auth/login")
+    if (!clerkUser && clerkIsLoaded) {
+      router.push("/auth/sign-in")
+      return
+    }
+
+    // Esperar a que Clerk cargue
+    if (!clerkIsLoaded) {
       return
     }
 
@@ -36,46 +43,94 @@ export default function ProfilePage() {
       try {
         setIsLoading(true)
 
-        console.log('Cargando datos del perfil para el usuario:', user.id)
+        // Verificar que tenemos datos de Clerk
+        if (!clerkUser?.id) {
+          console.warn('⚠️ No hay ID de usuario de Clerk disponible')
+          return
+        }
+
+        // Usar datos de Clerk
+        const userId = clerkUser.id
+        const userEmail = clerkUser.primaryEmailAddress?.emailAddress || ''
+        const userName = `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim()
+
+        console.log('🔄 Cargando datos del perfil para el usuario:', userId)
+
+        // Verificar que tenemos email
+        if (!userEmail) {
+          console.error('❌ No se pudo obtener el email del usuario')
+          toast.error('Error: No se pudo obtener el email del usuario')
+          return
+        }
 
         // Obtener o crear perfil usando el servicio
         const profileData = await getOrCreateUserProfile(
-          user.id,
-          user.email || '',
-          user.user_metadata?.name || user.user_metadata?.full_name || '',
+          userId,
+          userEmail,
+          userName || undefined,
           'customer'
         )
 
         if (!profileData) {
-          throw new Error('No se pudo obtener o crear el perfil del usuario')
+          console.error('❌ No se pudo obtener o crear el perfil del usuario')
+          toast.error('No se pudo cargar el perfil del usuario')
+          return
         }
 
+        console.log('✅ Perfil cargado exitosamente:', profileData)
         setProfile(profileData)
 
-        // Obtener pedidos
-        const { data: ordersData, error: ordersError } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("customer_id", user.id)
-          .order("created_at", { ascending: false })
+        // Obtener pedidos de forma segura
+        try {
+          const supabase = await getSupabaseClient()
+          if (supabase) {
+            const { data: ordersData, error: ordersError } = await supabase
+              .from("orders")
+              .select("*")
+              .eq("customer_id", userId)
+              .order("created_at", { ascending: false })
 
-        if (ordersError) {
-          console.error('Error al obtener pedidos:', ordersError)
-          throw new Error(`Error al obtener pedidos: ${ordersError.message}`)
+            if (ordersError) {
+              console.error('Error al obtener pedidos:', ordersError)
+              // No lanzar error, solo mostrar mensaje
+              toast.error('No se pudieron cargar los pedidos')
+              setOrders([])
+            } else {
+              setOrders(ordersData || [])
+            }
+          } else {
+            console.warn('⚠️ Cliente de Supabase no disponible para obtener pedidos')
+            setOrders([])
+          }
+        } catch (ordersError) {
+          console.error('❌ Error inesperado al obtener pedidos:', ordersError)
+          toast.error('Error al cargar pedidos')
+          setOrders([])
+        }
+      } catch (error) {
+        console.error("❌ Error crítico al cargar datos del perfil:", error)
+
+        // Determinar el mensaje de error apropiado
+        let errorMessage = 'Error al cargar datos del perfil'
+        if (error instanceof Error) {
+          if (error.message.includes('No se pudo obtener o crear el perfil')) {
+            errorMessage = 'No se pudo acceder a tu perfil. Intenta cerrar sesión e iniciar sesión nuevamente.'
+          } else if (error.message.includes('email')) {
+            errorMessage = 'Error con la información de tu cuenta. Verifica tu email.'
+          } else {
+            errorMessage = error.message
+          }
         }
 
-        setOrders(ordersData || [])
-      } catch (error) {
-        console.error("Error al cargar datos del perfil:", error)
         // Mostrar un toast con el error
-        toast.error(error instanceof Error ? error.message : 'Error al cargar datos del perfil')
+        toast.error(errorMessage)
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchProfileData()
-  }, [user, router])
+  }, [clerkUser, clerkIsLoaded, router])
 
   const navigateToSection = (section: string) => {
     router.push(`/profile/${section}`)
@@ -102,15 +157,19 @@ export default function ProfilePage() {
         <div className="flex items-center gap-4 mb-4">
           <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-white">
             <Image
-              src={user?.user_metadata?.avatar_url || user?.user_metadata?.picture || "https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=1780&auto=format&fit=crop"}
+              src={clerkUser?.imageUrl || "https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=1780&auto=format&fit=crop"}
               alt="Profile"
               fill
               className="object-cover"
             />
           </div>
           <div>
-            <h1 className="text-xl font-bold">¡Hola, {user?.user_metadata?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuario'}!</h1>
-            <p className="text-primary-foreground/80">{user?.email}</p>
+            <h1 className="text-xl font-bold">¡Hola, {
+              `${clerkUser?.firstName || ''} ${clerkUser?.lastName || ''}`.trim() ||
+              clerkUser?.primaryEmailAddress?.emailAddress?.split('@')[0] ||
+              'Usuario'
+            }!</h1>
+            <p className="text-primary-foreground/80">{clerkUser?.primaryEmailAddress?.emailAddress}</p>
           </div>
         </div>
 
@@ -223,7 +282,7 @@ export default function ProfilePage() {
               <h2 className="text-lg font-bold mb-3">Configuración</h2>
               <AccountLink
                 icon={Settings}
-                text="Configuración de la App"
+                text="Configuración de Perfil"
                 section="settings"
                 onClick={navigateToSection}
               />
@@ -244,7 +303,13 @@ export default function ProfilePage() {
   )
 }
 
-
+export default function ProfilePage() {
+  return (
+    <ProfileErrorBoundary>
+      <ProfilePageContent />
+    </ProfileErrorBoundary>
+  )
+}
 
 function AccountLink({
   icon: Icon,

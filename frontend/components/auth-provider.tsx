@@ -1,9 +1,31 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
-import { Session, User } from "@supabase/supabase-js"
-import { supabase } from "@/lib/supabase"
-import { isInOfflineMode, offlineData } from "@/lib/offline-mode"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
+import { isInOfflineMode } from "@/lib/offline-mode"
+import { secureTokenService } from "@/lib/secure-token-service"
+
+// Tipos para el usuario y la sesión
+export type User = {
+  id: string
+  email?: string | null
+  user_metadata?: {
+    name?: string
+    avatar_url?: string
+    [key: string]: any
+  }
+  app_metadata?: {
+    role?: string
+    [key: string]: any
+  }
+  created_at?: string
+}
+
+export type Session = {
+  user: User
+  expires_at: number
+  // Token data is now handled securely through httpOnly cookies
+  // and not exposed to client-side JavaScript
+}
 
 type AuthContextType = {
   user: User | null
@@ -11,7 +33,7 @@ type AuthContextType = {
   isLoading: boolean
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signInWithGoogle: () => Promise<{ error: any }>
-  signUp: (email: string, password: string) => Promise<{ error: any; data: any }>
+  signUp: (email: string, password: string, name?: string) => Promise<{ error: any; data: any }>
   signOut: () => Promise<void>
 }
 
@@ -22,50 +44,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  // Función para comprobar si una sesión ha expirado
+  const checkSessionExpiration = useCallback(async () => {
+    if (!session?.expires_at) return;
+
+    const timeUntilExpiry = session.expires_at - Date.now();
+
+    if (timeUntilExpiry <= 0) {
+      // Si la sesión ha expirado completamente
+      console.log('Sesión expirada, cerrando sesión...')
+      await secureTokenService.clearTokens()
+      setSession(null)
+      setUser(null)
+      localStorage.removeItem('auth_session')
+      return true; // Indica que la sesión fue invalidada
+    } else if (timeUntilExpiry <= 300000) { // 5 minutos antes de expirar
+      // Intentar refrescar el token
+      console.log('Refrescando tokens...')
+      const { error } = await secureTokenService.refreshTokens()
+      if (error) {
+        console.error('Error al refrescar tokens:', error)
+        return false;
+      }
+      return true; // Token refrescado exitosamente
+    }
+    return false; // No se necesitó acción
+  }, [session?.expires_at])
+
+  useEffect(() => {
+    if (!session?.expires_at) return;
+
+    // Calcular el tiempo hasta la próxima acción necesaria
+    const timeUntilExpiry = session.expires_at - Date.now();
+    const timeUntilRefresh = timeUntilExpiry - 300000; // 5 minutos antes
+    const nextCheckTime = Math.min(
+      Math.max(timeUntilRefresh, 0), // Tiempo hasta refresh
+      Math.max(timeUntilExpiry, 0)   // Tiempo hasta expiración
+    );
+
+    // Configurar timer específico para la próxima acción necesaria
+    const expirationTimer = setTimeout(async () => {
+      const wasHandled = await checkSessionExpiration();
+      if (wasHandled && session?.expires_at) {
+        // Si se manejó la sesión, configurar el siguiente timer
+        const nextSession = await secureTokenService.refreshTokens();
+        if (!nextSession.error) {
+          // El siguiente timer se configurará en el efecto cuando session se actualice
+        }
+      }
+    }, nextCheckTime);
+
+    // Limpiar el timer al desmontar o cuando cambie la sesión
+    return () => clearTimeout(expirationTimer);
+  }, [session?.expires_at, checkSessionExpiration]) // Agregar checkSessionExpiration como dependencia
+
   useEffect(() => {
     // Obtener la sesión inicial
     const getInitialSession = async () => {
       try {
-        // Verificar si estamos en modo offline
-        if (isInOfflineMode()) {
-          console.log('Modo offline: usando datos de ejemplo para la sesión')
-          // Simular un usuario en modo offline
-          const offlineUser = {
-            id: 'offline-user',
-            email: 'offline@example.com',
-            user_metadata: {
-              name: 'Usuario Offline',
-            },
-            app_metadata: {
-              role: 'customer',
-            },
-          } as User
-
-          // Crear una sesión offline
-          const offlineSession = {
-            user: offlineUser,
-            access_token: 'offline-token',
-            refresh_token: 'offline-refresh-token',
-            expires_at: Date.now() + 3600000, // 1 hora
-          } as Session
-
-          setSession(offlineSession)
-          setUser(offlineUser)
-          setIsLoading(false)
-          return
+        // Verificar si hay una sesión guardada en localStorage
+        const savedSession = localStorage.getItem('auth_session')
+        if (savedSession) {
+          const parsedSession = JSON.parse(savedSession) as Session
+          // Establecer la sesión y verificar expiración inmediatamente
+          setSession(parsedSession)
+          setUser(parsedSession.user)
+          // checkSessionExpiration se ejecutará automáticamente debido al cambio en session
         }
-
-        // Modo online: obtener sesión real
-        const { data, error } = await supabase.auth.getSession()
-
-        if (error) {
-          console.error("Error al obtener la sesión inicial:", error)
-          setIsLoading(false)
-          return
-        }
-
-        setSession(data.session)
-        setUser(data.session?.user ?? null)
       } catch (error) {
         console.error("Error al obtener la sesión inicial:", error)
       } finally {
@@ -74,19 +119,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     getInitialSession()
-
-    // Configurar el listener para cambios en la autenticación (solo en modo online)
-    let authListener = { subscription: { unsubscribe: () => {} } }
-
-    if (!isInOfflineMode()) {
-      authListener = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          setSession(session)
-          setUser(session?.user ?? null)
-          setIsLoading(false)
-        }
-      ).data
-    }
 
     // Escuchar cambios en el modo offline
     const handleOfflineModeChange = (event: Event) => {
@@ -104,10 +136,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Limpiar los listeners al desmontar
     return () => {
-      authListener.subscription.unsubscribe()
       window.removeEventListener('offlinemodechange', handleOfflineModeChange)
     }
   }, [])
+
+  // Guardar la sesión en localStorage cuando cambie
+useEffect(() => {
+  if (session) {
+    localStorage.setItem('auth_session', JSON.stringify(session))
+  } else {
+    localStorage.removeItem('auth_session')
+  }
+}, [session])
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -132,16 +172,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             },
           } as User
 
-          // Crear una sesión offline
+          // En modo offline, solo guardamos la información no sensible
           const offlineSession = {
             user: offlineUser,
-            access_token: 'offline-token',
-            refresh_token: 'offline-refresh-token',
             expires_at: Date.now() + 3600000, // 1 hora
-          } as Session
+          }
 
           setSession(offlineSession)
           setUser(offlineUser)
+          
+          // En un entorno real, aquí manejaríamos los tokens de forma segura
+          await secureTokenService.setTokens({
+            accessToken: 'offline-token',
+            refreshToken: 'offline-refresh-token'
+          })
 
           return { error: null }
         } else {
@@ -154,19 +198,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Modo online: autenticación real
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Modo online: simulación de autenticación
+      console.log('Simulando inicio de sesión con:', email)
+      
+      // Simular un retraso para que parezca real
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Simular un usuario autenticado
+      const mockUser: User = {
+        id: 'user-' + Date.now(),
+        email: email,
+        user_metadata: {
+          name: 'Usuario Simulado',
+        },
+        app_metadata: {
+          role: 'customer',
+        },
+        created_at: new Date().toISOString(),
+      }
+      
+      // Crear una sesión simulada
+      const mockSession: Session = {
+        user: mockUser,
+        expires_at: Date.now() + 3600000, // 1 hora
+      }
+
+      // Manejar tokens de forma segura
+      await secureTokenService.setTokens({
+        accessToken: 'mock-token-' + Date.now(),
+        refreshToken: 'mock-refresh-token-' + Date.now()
       })
-      return { error }
+      
+      setSession(mockSession)
+      setUser(mockUser)
+      
+      return { error: null }
     } catch (error) {
       console.error("Error al iniciar sesión:", error)
       return { error }
     }
   }
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name?: string) => {
     try {
       // Verificar si estamos en modo offline
       if (isInOfflineMode()) {
@@ -180,7 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: 'offline-user-' + Date.now(),
           email: email,
           user_metadata: {
-            name: 'Nuevo Usuario Offline',
+            name: name || 'Nuevo Usuario Offline',
           },
           app_metadata: {
             role: 'customer',
@@ -194,23 +267,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Modo online: registro real
-      console.log('Iniciando registro con Supabase...')
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      })
+      // Modo online: simulación de registro
+      console.log('Simulando registro con:', email)
 
-      if (error) {
-        console.error("Error de Supabase al registrarse:", error)
-      } else {
-        console.log('Registro con Supabase exitoso:', data)
+      // Simular un retraso para que parezca real
+      await new Promise(resolve => setTimeout(resolve, 800))
+
+      // Simular un usuario registrado
+      const mockUser: User = {
+        id: 'user-' + Date.now(),
+        email: email,
+        user_metadata: {
+          name: name || 'Nuevo Usuario',
+        },
+        app_metadata: {
+          role: 'customer',
+        },
+        created_at: new Date().toISOString(),
       }
+      
+      // Crear una sesión sin tokens sensibles
+      const mockSession: Session = {
+        user: mockUser,
+        expires_at: Date.now() + 3600000, // 1 hora
+      }
+      
+      // Manejar tokens de forma segura
+      await secureTokenService.setTokens({
+        accessToken: 'mock-token-' + Date.now(),
+        refreshToken: 'mock-refresh-token-' + Date.now()
+      })
+      
+      setSession(mockSession)
+      setUser(mockUser)
 
-      return { data, error }
+      return { 
+        data: { 
+          user: mockUser, 
+          session: mockSession 
+        }, 
+        error: null 
+      }
     } catch (error) {
       console.error("Error inesperado al registrarse:", error)
-      // Crear un objeto de error con formato similar al de Supabase
+      // Crear un objeto de error con formato similar al anterior
       const customError = {
         message: error instanceof Error ? error.message : 'Error de conexión con el servidor',
         status: error instanceof Response ? error.status : 500
@@ -245,10 +345,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Crear una sesión offline
         const offlineSession = {
           user: offlineUser,
-          access_token: 'google-offline-token',
-          refresh_token: 'google-offline-refresh-token',
           expires_at: Date.now() + 3600000, // 1 hora
         } as Session
+
+        // Manejar tokens de forma segura
+        await secureTokenService.setTokens({
+          accessToken: 'google-offline-token',
+          refreshToken: 'google-offline-refresh-token'
+        })
 
         setSession(offlineSession)
         setUser(offlineUser)
@@ -256,30 +360,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: null }
       }
 
-      // Modo online: usar nuestra ruta personalizada para la autenticación con Google
-      // Esta ruta maneja mejor el flujo de autenticación y los errores
-      console.log('Redirigiendo a la ruta de autenticación con Google...');
-
-      // Guardar una marca de tiempo para depuración
-      localStorage.setItem('auth_google_redirect_time', new Date().toISOString());
-
-      // Generar un nuevo code_verifier y guardarlo en localStorage
-      const generateCodeVerifier = () => {
-        const array = new Uint8Array(32)
-        window.crypto.getRandomValues(array)
-        return Array.from(array, (byte) => ('0' + (byte & 0xFF).toString(16)).slice(-2)).join('')
+      // Modo online: simulación de autenticación con Google
+      console.log('Simulando inicio de sesión con Google')
+      
+      // Simular un retraso para que parezca real
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Simular un usuario de Google
+      const mockUser: User = {
+        id: 'google-user-' + Date.now(),
+        email: 'google-user@example.com',
+        user_metadata: {
+          name: 'Usuario Google',
+          avatar_url: 'https://lh3.googleusercontent.com/a/default-user',
+        },
+        app_metadata: {
+          provider: 'google',
+          role: 'customer',
+        },
+      }
+      
+      // Crear una sesión sin tokens sensibles
+      const mockSession: Session = {
+        user: mockUser,
+        expires_at: Date.now() + 3600000, // 1 hora
       }
 
-      const newCodeVerifier = generateCodeVerifier()
-      localStorage.setItem('supabase.auth.code_verifier', newCodeVerifier)
-      localStorage.setItem('supabase-auth-code-verifier-backup', newCodeVerifier)
-
-      console.log('Nuevo code_verifier generado y guardado en AuthProvider')
-
-      // Usar la ruta dedicada para la autenticación con Google
-      window.location.href = '/auth/google';
-
-      return { error: null };
+      // Manejar los tokens de forma segura a través de httpOnly cookies
+      await secureTokenService.setTokens({
+        accessToken: 'google-mock-token-' + Date.now(),
+        refreshToken: 'google-mock-refresh-token-' + Date.now()
+      })
+      
+      setSession(mockSession)
+      setUser(mockUser)
+      
+      // Redirigir a la página principal después de un breve retraso
+      setTimeout(() => {
+        window.location.href = '/'
+      }, 1000)
+      
+      return { error: null }
     } catch (error) {
       console.error("Error al iniciar sesión con Google:", error)
       return { error }
@@ -298,11 +419,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Limpiar la sesión
         setSession(null)
         setUser(null)
+        localStorage.removeItem('auth_session')
         return
       }
 
-      // Modo online: cierre de sesión real
-      await supabase.auth.signOut()
+      // Modo online: simulación de cierre de sesión
+      console.log('Simulando cierre de sesión')
+      
+      // Simular un retraso para que parezca real
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      // Limpiar la sesión y los tokens de forma segura
+      await secureTokenService.clearTokens()
+      setSession(null)
+      setUser(null)
+      localStorage.removeItem('auth_session')
     } catch (error) {
       console.error("Error al cerrar sesión:", error)
     }

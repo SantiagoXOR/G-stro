@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ChevronLeft, CreditCard, Plus, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/components/auth-provider"
+import { useUser } from "@clerk/nextjs"
 import { toast } from "sonner"
 import {
   Dialog,
@@ -31,7 +31,7 @@ import {
 
 export default function PaymentMethodsPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user } = useUser()
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)

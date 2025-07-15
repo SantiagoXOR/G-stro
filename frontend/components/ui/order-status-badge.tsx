@@ -1,9 +1,11 @@
 "use client"
 
-import { Order } from "@/lib/services/orders"
+import type { Database } from "../../../shared/types/database.types"
+
+type OrderStatus = Database["public"]["Enums"]["order_status"]
 
 interface OrderStatusBadgeProps {
-  status: Order["status"]
+  status: OrderStatus
   className?: string
 }
 

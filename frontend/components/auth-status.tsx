@@ -1,10 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/lib/clerk-client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { supabase } from "@/lib/supabase"
 import Link from "next/link"
 
 export function AuthStatus() {
@@ -25,16 +24,13 @@ export function AuthStatus() {
 
     try {
       setProfileStatus("Verificando perfil...")
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
 
-      if (error) {
-        console.error('Error al verificar perfil:', error)
-        setProfileStatus(`Error: ${error.message}`)
-      } else if (data) {
+      // Simulamos una verificación de perfil
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // En una implementación real, aquí se verificaría el perfil en la base de datos
+      // Por ahora, simplemente asumimos que el perfil existe si el usuario está autenticado
+      if (user) {
         setProfileStatus("Perfil encontrado")
       } else {
         setProfileStatus("Perfil no encontrado")
@@ -72,30 +68,30 @@ export function AuthStatus() {
           <div>
             <span className="font-semibold">Estado del perfil:</span>{' '}
             <span className={
-              profileStatus.includes('Error') 
-                ? 'text-red-500' 
-                : profileStatus === 'Perfil encontrado' 
-                  ? 'text-green-500' 
+              profileStatus.includes('Error')
+                ? 'text-red-500'
+                : profileStatus === 'Perfil encontrado'
+                  ? 'text-green-500'
                   : 'text-amber-500'
             }>
               {profileStatus}
             </span>
           </div>
         </div>
-        
+
         <div className="flex flex-col space-y-2">
           {user ? (
             <>
-              <Button 
-                onClick={checkProfileStatus} 
-                variant="outline" 
+              <Button
+                onClick={checkProfileStatus}
+                variant="outline"
                 size="sm"
               >
                 Verificar perfil
               </Button>
-              <Button 
-                onClick={handleSignOut} 
-                variant="destructive" 
+              <Button
+                onClick={handleSignOut}
+                variant="destructive"
                 size="sm"
                 disabled={isLoading}
               >

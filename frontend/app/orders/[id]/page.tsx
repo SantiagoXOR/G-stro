@@ -9,7 +9,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { getOrderWithItems, cancelOrder, Order, OrderItem } from "@/lib/services/orders"
-import { useAuth } from "@/components/auth-provider"
+import { useUser } from "@clerk/nextjs"
 import { toast } from "sonner"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -123,7 +123,7 @@ function OrderTracking({ status }: { status: Order["status"] }) {
 
 export default function OrderDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user } = useUser()
   const [order, setOrder] = useState<Order | null>(null)
   const [orderItems, setOrderItems] = useState<OrderItem[]>([])
   const [isLoading, setIsLoading] = useState(true)

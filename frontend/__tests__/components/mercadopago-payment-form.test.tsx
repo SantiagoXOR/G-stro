@@ -67,29 +67,32 @@ describe('MercadoPagoPaymentForm Component', () => {
 
   it('calls onSubmit with payment data when form is submitted', async () => {
     render(<MercadoPagoPaymentForm {...mockProps} />)
-    
+
     // Completar el formulario
     fireEvent.change(screen.getByLabelText(/número de tarjeta/i), { target: { value: '4111 1111 1111 1111' } })
     fireEvent.change(screen.getByLabelText(/nombre del titular/i), { target: { value: 'John Doe' } })
     fireEvent.change(screen.getByLabelText(/vencimiento/i), { target: { value: '12/25' } })
     fireEvent.change(screen.getByLabelText(/código de seguridad/i), { target: { value: '123' } })
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: 'test@example.com' } })
-    
-    // Esperar a que el botón se habilite y hacer clic
+
+    // Esperar a que el botón se habilite
     await waitFor(() => {
       const payButton = screen.getByRole('button', { name: new RegExp(`pagar \\$${mockProps.amount.toLocaleString()}`, 'i') })
       expect(payButton).not.toBeDisabled()
-      fireEvent.click(payButton)
     })
-    
-    // Verificar que se llama al callback con los datos correctos
+
+    // Hacer clic en el botón de pago
+    const payButton = screen.getByRole('button', { name: new RegExp(`pagar \\$${mockProps.amount.toLocaleString()}`, 'i') })
+    fireEvent.click(payButton)
+
+    // Verificar que se llama al callback con los datos correctos (esperar más tiempo para la simulación)
     await waitFor(() => {
       expect(mockProps.onSubmit).toHaveBeenCalledWith(expect.objectContaining({
         method: 'mercadopago',
         email: 'test@example.com',
         installments: 1,
       }))
-    })
+    }, { timeout: 2000 })
   })
 
   it('disables form when isProcessing is true', () => {

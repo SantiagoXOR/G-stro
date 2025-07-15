@@ -5,11 +5,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ChevronLeft, CreditCard, Minus, Plus, Trash2, Wallet, MapPin } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCartStore, CartItem } from "@/lib/store/cart-store"
 import { createOrder } from "@/lib/services/orders"
-import { useAuth } from "@/components/auth-provider"
+import { useUser } from "@clerk/nextjs"
 import { toast } from "sonner"
 import { getUserPaymentMethods, createPaymentTransaction, processPayment, initMercadoPago } from "@/lib/services/mercadopago"
 import { getTableByNumber } from "@/lib/services/tables"
@@ -33,11 +33,12 @@ const paymentMethodTypes = [
   { id: "cash", name: "Efectivo", icon: Wallet },
 ]
 
-export default function CartPage() {
+// Componente que maneja los search params de forma segura
+function CartPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tableNumber = searchParams.get("table")
-  const { user } = useAuth()
+  const { user } = useUser()
   const cartItems = useCartStore((state) => state.items)
   const updateItemQuantity = useCartStore((state) => state.updateItemQuantity)
   const removeItem = useCartStore((state) => state.removeItem)
@@ -537,5 +538,33 @@ export default function CartPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+// Componente principal con Suspense boundary
+export default function CartPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col pb-32">
+        <div className="sticky top-0 z-20 bg-background pt-4 pb-2 px-4 border-b">
+          <div className="flex items-center gap-2 mb-2">
+            <Link href="/menu">
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold">Tu Pedido</h1>
+          </div>
+        </div>
+        <div className="flex items-center justify-center p-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Cargando carrito...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <CartPageContent />
+    </Suspense>
   )
 }
